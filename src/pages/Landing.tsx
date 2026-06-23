@@ -4,6 +4,16 @@ import { getProducts, getHeroData, getEditMode, saveProducts, getMozos, addQROrd
 import type { Product, HeroData, QRWaitOrder, OrderItem, Mozo } from '../types';
 import { ShoppingBag, Plus, Minus, Trash2, X, Check } from 'lucide-react';
 
+const formatImageUrl = (url: string) => {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) {
+    return `./${url.substring(1)}`;
+  }
+  return `./${url}`;
+};
+
 export const Landing: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
@@ -282,7 +292,7 @@ export const Landing: React.FC = () => {
         </div>
       </nav>
 
-      <div className="hero" style={{ backgroundImage: `url(${hero.imageUrl})`, height: '50vh', minHeight: '350px' }}>
+      <div className="hero" style={{ backgroundImage: `url(${formatImageUrl(hero.imageUrl)})`, height: '50vh', minHeight: '350px' }}>
         <div className="hero-overlay"></div>
         <div className="hero-content">
           <h2 className="text-yellow" style={{ fontSize: '1.5rem', marginBottom: '10px', letterSpacing: '2px' }}>{hero.subtitle}</h2>
@@ -302,7 +312,7 @@ export const Landing: React.FC = () => {
             <div key={product.id} className="editable-element" style={{ display: 'flex', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 8px 16px rgba(0,0,0,0.06)', transition: 'transform 0.3s' }}>
               {isEditMode && <button className="edit-badge" onClick={() => handleEditClick(product)}>Editar</button>}
               <div style={{ width: '40%', minWidth: '120px' }}>
-                <img src={product.imageUrl} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={formatImageUrl(product.imageUrl)} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div style={{ padding: '20px', width: '60%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
@@ -334,7 +344,7 @@ export const Landing: React.FC = () => {
                 <div key={product.id} className="editable-element" style={{ background: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   {isEditMode && <button className="edit-badge" onClick={() => handleEditClick(product)}>Editar</button>}
                   <div>
-                    <img src={product.imageUrl} alt={product.title} style={{ width: '100%', height: '140px', objectFit: 'contain', marginBottom: '15px' }} />
+                    <img src={formatImageUrl(product.imageUrl)} alt={product.title} style={{ width: '100%', height: '140px', objectFit: 'contain', marginBottom: '15px' }} />
                     <h4 style={{ fontSize: '1.15rem', color: '#111', marginBottom: '5px' }}>{product.title}</h4>
                     <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '10px' }}>{product.description}</p>
                   </div>
@@ -362,7 +372,7 @@ export const Landing: React.FC = () => {
                 <div key={product.id} className="editable-element" style={{ background: 'white', borderRadius: '12px', padding: '15px', textAlign: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   {isEditMode && <button className="edit-badge" onClick={() => handleEditClick(product)}>Editar</button>}
                   <div>
-                    <img src={product.imageUrl} alt={product.title} style={{ width: '100%', height: '100px', objectFit: 'contain', marginBottom: '10px' }} />
+                    <img src={formatImageUrl(product.imageUrl)} alt={product.title} style={{ width: '100%', height: '100px', objectFit: 'contain', marginBottom: '10px' }} />
                     <h4 style={{ fontSize: '1.1rem', color: '#111' }}>{product.title}</h4>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
@@ -513,7 +523,7 @@ export const Landing: React.FC = () => {
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {cart.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888' }}>
-                  <img src="/french_fries.png" style={{ width: '80px', opacity: 0.5, marginBottom: '20px' }} />
+                  <img src={formatImageUrl("/french_fries.png")} style={{ width: '80px', opacity: 0.5, marginBottom: '20px' }} />
                   <h3>Tu carrito está vacío</h3>
                   <p style={{ fontSize: '0.9rem', marginTop: '5px' }}>Agrega exquisitos combos clásicos o acompañamientos de nuestro menú.</p>
                 </div>
@@ -530,7 +540,7 @@ export const Landing: React.FC = () => {
                     }}
                   >
                     <img 
-                      src={item.product.imageUrl} 
+                      src={formatImageUrl(item.product.imageUrl)} 
                       alt={item.product.title} 
                       style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }}
                     />
@@ -737,7 +747,7 @@ export const Landing: React.FC = () => {
               <div className="form-group">
                 <label>Foto del Producto</label>
                 <div style={{ marginBottom: '10px', width: '100%', height: '150px', background: '#eee', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  <img src={editingProduct.imageUrl} style={{ height: '100%', objectFit: 'cover' }} alt="Preview" />
+                  <img src={formatImageUrl(editingProduct.imageUrl)} style={{ height: '100%', objectFit: 'cover' }} alt="Preview" />
                 </div>
                 <input type="file" accept="image/*" onChange={handleImageUpload} />
               </div>

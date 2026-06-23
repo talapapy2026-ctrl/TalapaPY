@@ -75,11 +75,15 @@ export const Admin: React.FC = () => {
   // QR Code generator fields
   const [qrMozoId, setQrMozoId] = useState('');
   const [qrTableNumber, setQrTableNumber] = useState('');
-  const [qrBaseUrl, setQrBaseUrl] = useState(window.location.origin);
+  const [qrBaseUrl, setQrBaseUrl] = useState(() => {
+    return window.location.origin + window.location.pathname.replace(/\/$/, '');
+  });
   const [generatedQR, setGeneratedQR] = useState<{ url: string; scanUrl: string } | null>(null);
 
   // Delivery QR States
-  const [deliveryBaseUrl, setDeliveryBaseUrl] = useState('https://talapaburger.loca.lt');
+  const [deliveryBaseUrl, setDeliveryBaseUrl] = useState(() => {
+    return window.location.origin + window.location.pathname.replace(/\/$/, '');
+  });
   const [generatedDeliveryQR, setGeneratedDeliveryQR] = useState<{ url: string; scanUrl: string } | null>(null);
 
   // Track pending orders count for sound alert triggering
@@ -263,9 +267,8 @@ export const Admin: React.FC = () => {
     const chosenMozo = mozos.find(m => m.id === qrMozoId);
     if (!chosenMozo) return;
 
-    // Clean base URL trailing slash if exists
     const cleanBaseUrl = qrBaseUrl.trim().replace(/\/$/, '');
-    const scanUrl = `${cleanBaseUrl}/?mozoId=${chosenMozo.id}&mesa=${encodeURIComponent(qrTableNumber)}`;
+    const scanUrl = `${cleanBaseUrl}/#/?mozoId=${chosenMozo.id}&mesa=${encodeURIComponent(qrTableNumber)}`;
     // Generate QR Image using API
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(scanUrl)}`;
     
@@ -278,7 +281,7 @@ export const Admin: React.FC = () => {
   const handleGenerateDeliveryQR = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanUrl = deliveryBaseUrl.trim().replace(/\/$/, '');
-    const scanUrl = `${cleanUrl}/?delivery=true`;
+    const scanUrl = `${cleanUrl}/#/?delivery=true`;
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(scanUrl)}`;
     
     setGeneratedDeliveryQR({

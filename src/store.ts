@@ -8,7 +8,7 @@ const defaultProducts: Product[] = [
     description: 'Doble Carne, Cheddar, Cebollita, Ketchup & Mayonesa.',
     price: 43000,
     category: 'clasica',
-    imageUrl: '/cheeseburger.png'
+    imageUrl: 'cheeseburger.png'
   },
   {
     id: '2',
@@ -16,7 +16,7 @@ const defaultProducts: Product[] = [
     description: 'Doble Carne, Cheddar, Tomate, Lechuga, Cebolla, Pepinillo & Salsa Mil Islas.',
     price: 45000,
     category: 'clasica',
-    imageUrl: '/american_burger.png'
+    imageUrl: 'american_burger.png'
   },
   {
     id: '3',
@@ -24,7 +24,7 @@ const defaultProducts: Product[] = [
     description: 'Papas Fritas Corte Fino.',
     price: 8000,
     category: 'extras',
-    imageUrl: '/french_fries.png'
+    imageUrl: 'french_fries.png'
   },
   {
     id: '4',
@@ -32,7 +32,7 @@ const defaultProducts: Product[] = [
     description: 'Cheddar Derretido.',
     price: 5000,
     category: 'salsas',
-    imageUrl: '/french_fries.png'
+    imageUrl: 'french_fries.png'
   }
 ];
 
@@ -40,7 +40,7 @@ const defaultHero: HeroData = {
   titleWhite: 'Auténtica',
   titleRed: 'Smash Burger',
   subtitle: 'CALIDAD PREMIUM',
-  imageUrl: '/hero_model.png'
+  imageUrl: 'hero_model.png'
 };
 
 // Getters and Setters
