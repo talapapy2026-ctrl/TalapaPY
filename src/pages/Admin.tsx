@@ -54,6 +54,7 @@ export const Admin: React.FC = () => {
   const [newMozoCode, setNewMozoCode] = useState('');
   const [newMozoTables, setNewMozoTables] = useState('');
   const [editingTablesMap, setEditingTablesMap] = useState<Record<string, string>>({});
+  const [editingPinsMap, setEditingPinsMap] = useState<Record<string, string>>({});
   const [monitoredMozoId, setMonitoredMozoId] = useState('');
   const [selectedMonitoredTable, setSelectedMonitoredTable] = useState<string | null>(null);
   const selectedMonitoredMozo = mozos.find(m => m.id === monitoredMozoId);
@@ -266,6 +267,35 @@ export const Admin: React.FC = () => {
     delete newMap[mozoId];
     setEditingTablesMap(newMap);
     alert('Mesas asignadas actualizadas con éxito.');
+  };
+
+  const handleSavePin = (mozoId: string) => {
+    const pinString = editingPinsMap[mozoId];
+    if (pinString === undefined) return;
+    
+    const cleanPin = pinString.trim();
+    if (!cleanPin) {
+      alert('El PIN no puede estar vacío.');
+      return;
+    }
+    
+    const updatedMozos = mozos.map(m => {
+      if (m.id === mozoId) {
+        return {
+          ...m,
+          code: cleanPin
+        };
+      }
+      return m;
+    });
+    
+    saveMozos(updatedMozos);
+    setMozos(updatedMozos);
+    
+    const newMap = { ...editingPinsMap };
+    delete newMap[mozoId];
+    setEditingPinsMap(newMap);
+    alert('PIN de seguridad actualizado con éxito.');
   };
 
   const handleDeleteMozo = (id: string) => {
@@ -1038,7 +1068,27 @@ export const Admin: React.FC = () => {
                       {mozos.map(mozo => (
                         <tr key={mozo.id} style={{ borderBottom: '1px solid #eee' }}>
                           <td style={{ padding: '10px', fontWeight: 'bold' }}>{mozo.name}</td>
-                          <td style={{ padding: '10px' }}>{mozo.code}</td>
+                          <td style={{ padding: '10px' }}>
+                             <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                               <input 
+                                 type="text" 
+                                 className="form-control" 
+                                 style={{ fontSize: '0.8rem', padding: '4px 8px', width: '80px', display: 'inline-block' }}
+                                 placeholder="PIN"
+                                 value={editingPinsMap[mozo.id] !== undefined ? editingPinsMap[mozo.id] : mozo.code}
+                                 onChange={e => setEditingPinsMap({ ...editingPinsMap, [mozo.id]: e.target.value })}
+                               />
+                               {editingPinsMap[mozo.id] !== undefined && (
+                                 <button 
+                                   onClick={() => handleSavePin(mozo.id)}
+                                   className="btn btn-secondary"
+                                   style={{ padding: '4px 8px', fontSize: '0.75rem', background: '#2e7d32', color: 'white' }}
+                                 >
+                                   Guardar
+                                 </button>
+                               )}
+                             </div>
+                           </td>
                           <td style={{ padding: '10px' }}>
                             <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                               <input 
@@ -1132,7 +1182,7 @@ export const Admin: React.FC = () => {
                             {(() => {
                               const defaultTables = selectedMonitoredMozo.assignedTables || [];
 
-                              const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted'));
+                              const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready'));
                               
                               const customActiveTables = Array.from(
                                 new Set(
@@ -1213,10 +1263,29 @@ export const Admin: React.FC = () => {
                                         borderRadius: '8px',
                                         padding: '10px 5px',
                                         cursor: 'pointer',
-                                        background: isActive 
-                                          ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
-                                          : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
-                                        color: isActive ? 'white' : '#546e7a',
+                                        background: (() => {
+                                          const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                                          const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                                          
+                                          if (hasPending) {
+                                            return 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)'; // Yellow
+                                          } else if (hasAccepted) {
+                                            return 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)'; // Blue
+                                          } else if (hasReady) {
+                                            return 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'; // Green
+                                          }
+                                          return 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)'; // Gray
+                                        })(),
+                                        color: (() => {
+                                          const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                                          const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                                          
+                                          if (hasPending) return '#111';
+                                          if (hasAccepted || hasReady) return 'white';
+                                          return '#546e7a';
+                                        })(),
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',

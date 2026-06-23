@@ -301,7 +301,6 @@ export const MozoPortal: React.FC = () => {
             {allTables.map(table => {
               const tableActiveOrders = getTableActiveOrders(table);
               const isActive = tableActiveOrders.length > 0;
-              const hasReadyOrder = tableActiveOrders.some(o => o.status === 'ready');
               const isSelected = selectedTable === table;
 
               return (
@@ -314,17 +313,39 @@ export const MozoPortal: React.FC = () => {
                     padding: '20px 10px',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    background: hasReadyOrder
-                      ? 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)'
-                      : isActive 
-                        ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
-                        : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
-                    color: (isActive || hasReadyOrder) ? 'white' : '#546e7a',
-                    boxShadow: hasReadyOrder
-                      ? '0 4px 12px rgba(255, 152, 0, 0.4)'
-                      : isActive 
-                        ? '0 4px 8px rgba(76, 175, 80, 0.25)' 
-                        : 'none',
+                    background: (() => {
+                      const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                      const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                      const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                      
+                      if (hasPending) {
+                        return 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)'; // Yellow
+                      } else if (hasAccepted) {
+                        return 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)'; // Blue
+                      } else if (hasReady) {
+                        return 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'; // Green
+                      }
+                      return 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)'; // Gray
+                    })(),
+                    color: (() => {
+                      const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                      const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                      const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                      
+                      if (hasPending) return '#111';
+                      if (hasAccepted || hasReady) return 'white';
+                      return '#546e7a';
+                    })(),
+                    boxShadow: (() => {
+                      const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                      const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                      const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                      
+                      if (hasPending) return '0 4px 12px rgba(251, 192, 45, 0.4)';
+                      if (hasAccepted) return '0 4px 12px rgba(33, 150, 243, 0.25)';
+                      if (hasReady) return '0 4px 12px rgba(76, 175, 80, 0.3)';
+                      return 'none';
+                    })(),
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -344,9 +365,19 @@ export const MozoPortal: React.FC = () => {
                         padding: '2px 6px',
                         borderRadius: '10px',
                         fontWeight: 'bold',
-                        animation: 'pulse 1.5s infinite'
+                        animation: 'pulse 1.5s infinite',
+                        color: tableActiveOrders.some(o => o.status === 'pending') ? '#111' : 'inherit'
                       }}>
-                        {hasReadyOrder ? '🔔 ¡LISTO!' : `${tableActiveOrders.length} ${tableActiveOrders.length === 1 ? 'Pedido' : 'Pedidos'}`}
+                        {(() => {
+                          const hasPending = tableActiveOrders.some(o => o.status === 'pending');
+                          const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
+                          const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                          
+                          if (hasPending) return '⏳ PENDIENTE';
+                          if (hasAccepted) return '🍳 EN COCINA';
+                          if (hasReady) return '🔔 ¡LISTO!';
+                          return `${tableActiveOrders.length} ${tableActiveOrders.length === 1 ? 'Pedido' : 'Pedidos'}`;
+                        })()}
                       </span>
                       {(() => {
                         const oldestOrder = tableActiveOrders.reduce((oldest, current) => {
@@ -379,12 +410,16 @@ export const MozoPortal: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: '15px', fontSize: '0.8rem', color: '#666', marginTop: '15px', paddingLeft: '5px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)' }}></span>
-              <span>Comida Lista (Retirar)</span>
+              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)' }}></span>
+              <span>Nuevos Pedidos (Pendiente)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)' }}></span>
+              <span>En Cocina / Preparando</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' }}></span>
-              <span>Mesa con pedidos activos</span>
+              <span>Listo / A retirar</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)' }}></span>
