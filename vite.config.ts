@@ -185,6 +185,7 @@ export default defineConfig({
       }
     }
   ],
+  base: './',
   server: {
     host: true,
     allowedHosts: true
