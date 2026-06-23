@@ -91,7 +91,7 @@ export const Admin: React.FC = () => {
   const [qrBaseUrl, setQrBaseUrl] = useState(() => {
     return window.location.origin + window.location.pathname.replace(/\/$/, '');
   });
-  const [generatedQR, setGeneratedQR] = useState<{ url: string; scanUrl: string } | null>(null);
+  const [generatedQR, setGeneratedQR] = useState<{ url: string; scanUrl: string; tableNumber?: string } | null>(null);
 
 
 
@@ -285,14 +285,33 @@ export const Admin: React.FC = () => {
     if (!chosenMozo) return;
 
     const cleanBaseUrl = qrBaseUrl.trim().replace(/\/$/, '');
-    const scanUrl = `${cleanBaseUrl}/#/?mozoId=${chosenMozo.id}&mesa=${encodeURIComponent(qrTableNumber)}`;
+    const cleanTable = /^\d+$/.test(qrTableNumber.trim()) ? `Mesa ${qrTableNumber.trim()}` : qrTableNumber.trim();
+    const scanUrl = `${cleanBaseUrl}/#/?mozoId=${chosenMozo.id}&mesa=${encodeURIComponent(cleanTable)}`;
     // Generate QR Image using API
     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(scanUrl)}`;
     
     setGeneratedQR({
       url: qrApiUrl,
-      scanUrl: scanUrl
+      scanUrl: scanUrl,
+      tableNumber: cleanTable
     });
+
+    // Dynamically assign this table to the mozo's assignedTables if not already present
+    const currentTables = chosenMozo.assignedTables || [];
+    if (!currentTables.some(t => t.toLowerCase() === cleanTable.toLowerCase())) {
+      const updatedTables = [...currentTables, cleanTable];
+      const updatedMozos = mozos.map(m => {
+        if (m.id === chosenMozo.id) {
+          return {
+            ...m,
+            assignedTables: updatedTables
+          };
+        }
+        return m;
+      });
+      saveMozos(updatedMozos);
+      setMozos(updatedMozos);
+    }
   };
 
 
@@ -1078,14 +1097,12 @@ export const Admin: React.FC = () => {
                         <div>
                           <div style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
-                            gap: '10px',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                            gap: '15px',
                             marginBottom: '15px'
                           }}>
                             {(() => {
-                              const defaultTables = selectedMonitoredMozo.assignedTables && selectedMonitoredMozo.assignedTables.length > 0
-                                ? selectedMonitoredMozo.assignedTables
-                                : ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Mesa 4', 'Mesa 5', 'Mesa 6', 'Mesa 7', 'Mesa 8'];
+                              const defaultTables = selectedMonitoredMozo.assignedTables || [];
 
                               const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted'));
                               
@@ -1094,67 +1111,151 @@ export const Admin: React.FC = () => {
                                   activeMozoOrders
                                     .map(o => o.tableNumber)
                                     .filter(t => !defaultTables.includes(t))
-                                )
+                                  )
                               );
 
                               const allTables = [...defaultTables, ...customActiveTables];
+
+                              if (allTables.length === 0) {
+                                return (
+                                  <div style={{ gridColumn: '1 / -1', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.85rem' }}>
+                                    ⚠️ Este mozo aún no tiene mesas generadas. Use el <strong>Generador de QR para Mesas</strong> (a la derecha) para crear una mesa para este mozo.
+                                  </div>
+                                );
+                              }
 
                               return allTables.map(table => {
                                 const tableActiveOrders = activeMozoOrders.filter(o => o.tableNumber.toLowerCase() === table.toLowerCase());
                                 const isActive = tableActiveOrders.length > 0;
                                 const isSelected = selectedMonitoredTable === table;
+                                const scanUrl = `${qrBaseUrl.trim().replace(/\/$/, '')}/#/?mozoId=${selectedMonitoredMozo.id}&mesa=${encodeURIComponent(table)}`;
+                                const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(scanUrl)}`;
 
                                 return (
-                                  <button
-                                    key={table}
-                                    type="button"
-                                    onClick={() => setSelectedMonitoredTable(isSelected ? null : table)}
-                                    style={{
-                                      border: isSelected ? '3px solid var(--primary-red)' : '1px solid #e2e8f0',
-                                      borderRadius: '8px',
-                                      padding: '12px 5px',
-                                      cursor: 'pointer',
-                                      background: isActive 
-                                        ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
-                                        : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
-                                      color: isActive ? 'white' : '#546e7a',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '3px'
+                                  <div 
+                                    key={table} 
+                                    style={{ 
+                                      display: 'flex', 
+                                      flexDirection: 'column', 
+                                      gap: '8px', 
+                                      alignItems: 'center', 
+                                      background: '#f8fafc', 
+                                      padding: '10px', 
+                                      borderRadius: '10px', 
+                                      border: '1px solid #e2e8f0',
+                                      boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
                                     }}
                                   >
-                                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem', fontFamily: 'Oswald' }}>{table}</span>
-                                    {isActive && (
-                                      <>
-                                        <span style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.25)', padding: '1px 5px', borderRadius: '10px', fontWeight: 'bold' }}>
-                                          {tableActiveOrders.length} {tableActiveOrders.length === 1 ? 'ped' : 'peds'}
-                                        </span>
-                                        {(() => {
-                                          const oldestOrder = tableActiveOrders.reduce((oldest, current) => {
-                                            return new Date(current.date).getTime() < new Date(oldest.date).getTime() ? current : oldest;
-                                          }, tableActiveOrders[0]);
-                                          return oldestOrder ? (
-                                            <span style={{
-                                              fontSize: '0.65rem',
-                                              fontWeight: 'bold',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '2px',
-                                              background: 'rgba(0,0,0,0.15)',
-                                              padding: '1px 4px',
-                                              borderRadius: '4px',
-                                              marginTop: '2px'
-                                            }}>
-                                              <Clock size={8} />
-                                              {formatTimer(oldestOrder.date)}
-                                            </span>
-                                          ) : null;
-                                        })()}
-                                      </>
-                                    )}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedMonitoredTable(isSelected ? null : table)}
+                                      style={{
+                                        width: '100%',
+                                        border: isSelected ? '3px solid var(--primary-red)' : '1px solid #e2e8f0',
+                                        borderRadius: '8px',
+                                        padding: '10px 5px',
+                                        cursor: 'pointer',
+                                        background: isActive 
+                                          ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
+                                          : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
+                                        color: isActive ? 'white' : '#546e7a',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '3px'
+                                      }}
+                                    >
+                                      <span style={{ fontWeight: 'bold', fontSize: '0.85rem', fontFamily: 'Oswald' }}>{table}</span>
+                                      {isActive && (
+                                        <>
+                                          <span style={{ fontSize: '0.65rem', background: 'rgba(255, 255, 255, 0.25)', padding: '1px 5px', borderRadius: '10px', fontWeight: 'bold' }}>
+                                            {tableActiveOrders.length} {tableActiveOrders.length === 1 ? 'ped' : 'peds'}
+                                          </span>
+                                          {(() => {
+                                            const oldestOrder = tableActiveOrders.reduce((oldest, current) => {
+                                              return new Date(current.date).getTime() < new Date(oldest.date).getTime() ? current : oldest;
+                                            }, tableActiveOrders[0]);
+                                            return oldestOrder ? (
+                                              <span style={{
+                                                fontSize: '0.65rem',
+                                                fontWeight: 'bold',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '2px',
+                                                background: 'rgba(0,0,0,0.15)',
+                                                padding: '1px 4px',
+                                                borderRadius: '4px',
+                                                marginTop: '2px'
+                                              }}>
+                                                <Clock size={8} />
+                                                {formatTimer(oldestOrder.date)}
+                                              </span>
+                                            ) : null;
+                                          })()}
+                                        </>
+                                      )}
+                                    </button>
+
+                                    {/* QR Code container below the button */}
+                                    <div style={{ background: 'white', padding: '5px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', width: '100%' }}>
+                                      <img 
+                                        src={qrImageUrl} 
+                                        alt={`QR ${table}`} 
+                                        style={{ width: '90px', height: '90px' }} 
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // Print this specific table QR code
+                                          const iframe = document.createElement('iframe');
+                                          iframe.style.position = 'absolute';
+                                          iframe.style.width = '0px';
+                                          iframe.style.height = '0px';
+                                          iframe.style.border = 'none';
+                                          iframe.style.top = '-9999px';
+                                          document.body.appendChild(iframe);
+
+                                          const doc = iframe.contentWindow?.document || iframe.contentDocument;
+                                          if (doc) {
+                                            doc.open();
+                                            doc.write(`
+                                              <html>
+                                                <head>
+                                                  <title>Imprimir QR - ${table}</title>
+                                                  <style>
+                                                    body { font-family: sans-serif; text-align: center; padding: 40px; }
+                                                    .frame { border: 4px solid #da251d; border-radius: 20px; padding: 30px; display: inline-block; }
+                                                    h1 { font-family: 'Oswald', sans-serif; margin: 0 0 10px 0; color: #da251d; }
+                                                    h2 { margin: 0 0 20px 0; color: #333; }
+                                                    .footer { margin-top: 20px; font-weight: bold; color: #666; }
+                                                  </style>
+                                                </head>
+                                                <body>
+                                                  <div class="frame">
+                                                    <h1>TALAPA BURGER</h1>
+                                                    <h2>ESCANEE PARA PEDIR</h2>
+                                                    <img src="${qrImageUrl}" style="width: 250px; height: 250px" />
+                                                    <div class="footer">${table.toUpperCase()} — ATENDIDO POR: ${selectedMonitoredMozo.name.toUpperCase()}</div>
+                                                  </div>
+                                                </body>
+                                              </html>
+                                            `);
+                                            doc.close();
+                                            setTimeout(() => {
+                                              iframe.contentWindow?.focus();
+                                              iframe.contentWindow?.print();
+                                              setTimeout(() => document.body.removeChild(iframe), 1000);
+                                            }, 500);
+                                          }
+                                        }}
+                                        style={{ width: '100%', background: '#fafafa', border: '1px solid #ddd', borderRadius: '4px', padding: '3px 0', fontSize: '0.65rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', fontWeight: 'bold' }}
+                                      >
+                                        <Printer size={10} /> Imprimir QR
+                                      </button>
+                                    </div>
+                                  </div>
                                 );
                               });
                             })()}
@@ -1295,7 +1396,7 @@ export const Admin: React.FC = () => {
                   {generatedQR && (
                     <div style={{ marginTop: '20px', padding: '15px', background: '#fafafa', borderRadius: '8px', border: '1px solid #eee', textAlign: 'center' }}>
                       <h3 style={{ fontFamily: 'Oswald', fontSize: '1rem', marginBottom: '10px' }}>
-                        QR LISTO: {mozos.find(m => m.id === qrMozoId)?.name} — {qrTableNumber}
+                        QR LISTO: {mozos.find(m => m.id === qrMozoId)?.name} — {generatedQR.tableNumber || qrTableNumber}
                       </h3>
                       <div style={{ background: 'white', padding: '15px', borderRadius: '8px', display: 'inline-block', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', marginBottom: '10px' }}>
                         <img src={generatedQR.url} alt="QR Code" style={{ width: '180px', height: '180px' }} />
@@ -1314,12 +1415,13 @@ export const Admin: React.FC = () => {
                           document.body.appendChild(iframe);
 
                           const doc = iframe.contentWindow?.document || iframe.contentDocument;
+                          const currentTableText = generatedQR.tableNumber || qrTableNumber;
                           if (doc) {
                             doc.open();
                             doc.write(`
                               <html>
                                 <head>
-                                  <title>Imprimir QR - ${qrTableNumber}</title>
+                                  <title>Imprimir QR - ${currentTableText}</title>
                                   <style>
                                     body { font-family: sans-serif; text-align: center; padding: 40px; }
                                     .frame { border: 4px solid #da251d; border-radius: 20px; padding: 30px; display: inline-block; }
@@ -1333,7 +1435,7 @@ export const Admin: React.FC = () => {
                                     <h1>TALAPA BURGER</h1>
                                     <h2>ESCANEE PARA PEDIR</h2>
                                     <img src="${generatedQR.url}" style="width: 250px; height: 250px" />
-                                    <div class="footer">${qrTableNumber.toUpperCase()} — ATENDIDO POR: ${mozos.find(m => m.id === qrMozoId)?.name.toUpperCase()}</div>
+                                    <div class="footer">${currentTableText.toUpperCase()} — ATENDIDO POR: ${mozos.find(m => m.id === qrMozoId)?.name.toUpperCase()}</div>
                                   </div>
                                 </body>
                               </html>
