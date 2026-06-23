@@ -35,6 +35,7 @@ export const Admin: React.FC = () => {
   
   // Edit mode badge indicator
   const [editModeActive, setEditModeActive] = useState(false);
+  const [isCocina, setIsCocina] = useState(false);
 
   // New Mozo Fields
   const [newMozoName, setNewMozoName] = useState('');
@@ -87,9 +88,17 @@ export const Admin: React.FC = () => {
 
   useEffect(() => {
     // Protect admin panel with session
-    if (localStorage.getItem('talapa_admin_logged') !== 'true') {
+    const isAdmin = localStorage.getItem('talapa_admin_logged') === 'true';
+    const isCoc = localStorage.getItem('talapa_cocina_logged') === 'true';
+    
+    if (!isAdmin && !isCoc) {
       navigate('/login?role=admin');
       return;
+    }
+    
+    setIsCocina(isCoc);
+    if (isCoc) {
+      setActiveTab('qr_orders');
     }
 
     setSales(getSales());
@@ -415,7 +424,8 @@ export const Admin: React.FC = () => {
 
   // Separate QR Orders
   const pendingQROrders = qrOrders.filter(o => o.status === 'pending');
-  const activeKitchenOrders = qrOrders.filter(o => o.status === 'accepted');
+  const kitchenCookingOrders = qrOrders.filter(o => o.status === 'accepted');
+  const readyOrders = qrOrders.filter(o => o.status === 'ready');
 
   return (
     <div className="admin-layout">
@@ -425,7 +435,9 @@ export const Admin: React.FC = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <Sparkles size={24} color="var(--secondary-yellow)" />
-            <h2 style={{ margin: 0, color: 'var(--secondary-yellow)', fontFamily: 'Oswald', fontSize: '1.4rem' }}>TALAPA PANEL</h2>
+            <h2 style={{ margin: 0, color: 'var(--secondary-yellow)', fontFamily: 'Oswald', fontSize: '1.4rem' }}>
+              {isCocina ? 'TALAPA COCINA' : 'TALAPA PANEL'}
+            </h2>
           </div>
           <div style={{ 
             fontSize: '0.75rem', 
@@ -445,22 +457,24 @@ export const Admin: React.FC = () => {
           <Link to="/" className="sidebar-link">← Volver al Sitio</Link>
           <div style={{ margin: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}></div>
 
-          <button 
-            onClick={() => setActiveTab('sales')} 
-            className="sidebar-link" 
-            style={{ 
-              width: '100%', 
-              background: activeTab === 'sales' ? 'rgba(255,255,255,0.15)' : 'none', 
-              border: 'none', 
-              textAlign: 'left', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}
-          >
-            <Calendar size={18} /> Historial Ventas
-          </button>
+          {!isCocina && (
+            <button 
+              onClick={() => setActiveTab('sales')} 
+              className="sidebar-link" 
+              style={{ 
+                width: '100%', 
+                background: activeTab === 'sales' ? 'rgba(255,255,255,0.15)' : 'none', 
+                border: 'none', 
+                textAlign: 'left', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <Calendar size={18} /> Historial Ventas
+            </button>
+          )}
 
           <button 
             onClick={() => setActiveTab('qr_orders')} 
@@ -477,7 +491,7 @@ export const Admin: React.FC = () => {
               gap: '10px'
             }}
           >
-            <ShoppingCart size={18} /> Pedidos QR
+            <ShoppingCart size={18} /> {isCocina ? 'Cocina' : 'Pedidos QR'}
             {pendingQROrders.length > 0 && (
               <span style={{
                 position: 'absolute',
@@ -499,43 +513,52 @@ export const Admin: React.FC = () => {
             )}
           </button>
 
-          <button 
-            onClick={() => setActiveTab('mozos')} 
-            className="sidebar-link" 
-            style={{ 
-              width: '100%', 
-              background: activeTab === 'mozos' ? 'rgba(255,255,255,0.15)' : 'none', 
-              border: 'none', 
-              textAlign: 'left', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}
-          >
-            <Users size={18} /> Gestión de Mozos
-          </button>
+          {!isCocina && (
+            <button 
+              onClick={() => setActiveTab('mozos')} 
+              className="sidebar-link" 
+              style={{ 
+                width: '100%', 
+                background: activeTab === 'mozos' ? 'rgba(255,255,255,0.15)' : 'none', 
+                border: 'none', 
+                textAlign: 'left', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <Users size={18} /> Gestión de Mozos
+            </button>
+          )}
         </div>
 
         <div>
-          <button 
-            onClick={handleToggleEditMode} 
-            className="btn" 
-            style={{ 
-              width: '100%', 
-              backgroundColor: editModeActive ? 'var(--primary-red)' : 'white', 
-              color: editModeActive ? 'white' : 'black',
-              fontSize: '0.9rem',
-              padding: '8px 12px',
-              marginBottom: '10px'
-            }}
-          >
-            {editModeActive ? 'Desactivar Edición' : 'Activar Edición'}
-          </button>
+          {!isCocina && (
+            <button 
+              onClick={handleToggleEditMode} 
+              className="btn" 
+              style={{ 
+                width: '100%', 
+                backgroundColor: editModeActive ? 'var(--primary-red)' : 'white', 
+                color: editModeActive ? 'white' : 'black',
+                fontSize: '0.9rem',
+                padding: '8px 12px',
+                marginBottom: '10px'
+              }}
+            >
+              {editModeActive ? 'Desactivar Edición' : 'Activar Edición'}
+            </button>
+          )}
           <button 
             onClick={() => {
-              localStorage.removeItem('talapa_admin_logged');
-              navigate('/login?role=admin');
+              if (isCocina) {
+                localStorage.removeItem('talapa_cocina_logged');
+                navigate('/login?role=cocina');
+              } else {
+                localStorage.removeItem('talapa_admin_logged');
+                navigate('/login?role=admin');
+              }
             }} 
             className="btn" 
             style={{ 
@@ -635,7 +658,7 @@ export const Admin: React.FC = () => {
           <div>
             <h1 style={{ color: 'var(--primary-red)', marginBottom: '20px', fontFamily: 'Oswald' }}>Pedidos Recibidos por QR</h1>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
               
               {/* Left Column: Pending orders awaiting admin validation */}
               <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
@@ -726,26 +749,26 @@ export const Admin: React.FC = () => {
                 )}
               </div>
 
-              {/* Right Column: Accepted orders preparing in kitchen */}
+              {/* Middle Column: Accepted orders preparing in kitchen */}
               <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                 <div style={{ marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
                   <h2 style={{ fontFamily: 'Oswald', fontSize: '1.2rem', color: '#2e7d32' }}>
-                    Pedidos en Cocina / Preparación ({activeKitchenOrders.length})
+                    En Cocina / Preparando ({kitchenCookingOrders.length})
                   </h2>
                 </div>
 
-                {activeKitchenOrders.length === 0 ? (
+                {kitchenCookingOrders.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888' }}>
                     <p>No hay pedidos en preparación en la cocina actualmente.</p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {activeKitchenOrders.map(order => (
+                    {kitchenCookingOrders.map(order => (
                       <div 
                         key={order.id} 
                         style={{
-                          background: '#f8fdf9',
-                          border: '1px solid #e1f5fe',
+                          background: '#fffdeb',
+                          border: '1px solid #ffe082',
                           borderRadius: '8px',
                           padding: '12px 15px',
                           display: 'flex',
@@ -764,7 +787,70 @@ export const Admin: React.FC = () => {
                             </div>
                           ) : (
                             <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '2px' }}>
-                              Mozo: {order.mozoName}
+                              Mozo: <strong>{order.mozoName}</strong>
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px' }}>
+                            {order.items.length} productos • Gs. {order.total.toLocaleString()}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            updateQROrderStatus(order.id, 'ready');
+                            setQrOrders(getQROrders());
+                          }}
+                          className="btn"
+                          style={{ background: '#ff9800', color: 'white', padding: '8px 12px', fontSize: '0.8rem', borderRadius: '4px', border: 'none', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
+                          🔔 Listo (Avisar Mozo)
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Finished orders ready for waiters or dispatch */}
+              <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                <div style={{ marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
+                  <h2 style={{ fontFamily: 'Oswald', fontSize: '1.2rem', color: '#da251d', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#da251d', display: 'inline-block', animation: 'pulse 1.2s infinite' }}></span>
+                    Terminados / A Retirar ({readyOrders.length})
+                  </h2>
+                </div>
+
+                {readyOrders.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888' }}>
+                    <p>No hay pedidos listos para retirar.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {readyOrders.map(order => (
+                      <div 
+                        key={order.id} 
+                        style={{
+                          background: '#f1f8e9',
+                          border: '1px solid #a5d6a7',
+                          borderRadius: '8px',
+                          padding: '12px 15px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          boxShadow: '0 2px 8px rgba(76, 175, 80, 0.15)'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: order.tableNumber === 'DELIVERY' || order.tableNumber === 'RETIRO' ? '#da251d' : '#111' }}>
+                            {order.tableNumber === 'DELIVERY' ? '🛵 DELIVERY' : order.tableNumber === 'RETIRO' ? '🥡 RETIRO LOCAL' : `MESA ${order.tableNumber}`}
+                            {order.deliveryDetails && ` (${order.deliveryDetails.customerName})`}
+                          </div>
+                          {order.deliveryDetails ? (
+                            <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '2px' }}>
+                              📞 {order.deliveryDetails.phone} {order.deliveryDetails.address && ` | 📍 ${order.deliveryDetails.address}`}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.75rem', color: '#c62828', marginTop: '2px', fontWeight: 'bold' }}>
+                              🚨 Retira: {order.mozoName.toUpperCase()}
                             </div>
                           )}
                           <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px' }}>
@@ -777,9 +863,9 @@ export const Admin: React.FC = () => {
                             setQrOrders(getQROrders());
                           }}
                           className="btn"
-                          style={{ background: '#2e7d32', color: 'white', padding: '6px 12px', fontSize: '0.8rem', borderRadius: '4px' }}
+                          style={{ background: '#2e7d32', color: 'white', padding: '8px 12px', fontSize: '0.8rem', borderRadius: '4px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                         >
-                          Listo / Entregado
+                          ✓ Entregado
                         </button>
                       </div>
                     ))}
@@ -1036,7 +1122,7 @@ export const Admin: React.FC = () => {
                                 PEDIDOS ACTIVOS EN {selectedMonitoredTable.toUpperCase()}
                               </h4>
                               {(() => {
-                                const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted'));
+                                const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready'));
                                 const tableActiveOrders = activeMozoOrders.filter(o => o.tableNumber.toLowerCase() === selectedMonitoredTable.toLowerCase());
 
                                 if (tableActiveOrders.length === 0) {
@@ -1054,9 +1140,17 @@ export const Admin: React.FC = () => {
                                             borderRadius: '10px',
                                             fontWeight: 'bold',
                                             color: order.status === 'pending' ? '#856404' : '#fff',
-                                            backgroundColor: order.status === 'pending' ? '#fff3cd' : '#2e7d32'
+                                            backgroundColor: order.status === 'pending' 
+                                              ? '#fff3cd' 
+                                              : order.status === 'ready' 
+                                                ? '#ff9800' 
+                                                : '#2e7d32'
                                           }}>
-                                            {order.status === 'pending' ? 'Pendiente' : 'En Cocina'}
+                                            {order.status === 'pending' 
+                                              ? 'Pendiente' 
+                                              : order.status === 'ready' 
+                                                ? 'Listo' 
+                                                : 'En Cocina'}
                                           </span>
                                           <span style={{ color: '#888', fontSize: '0.75rem' }}>Ref: #{order.id.slice(-5)}</span>
                                         </div>

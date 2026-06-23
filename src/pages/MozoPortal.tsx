@@ -105,7 +105,7 @@ export const MozoPortal: React.FC = () => {
 
   // Filter orders for the active Mozo
   const mozoOrders = orders.filter(o => o.mozoId === activeMozo?.id);
-  const activeOrders = mozoOrders.filter(o => o.status === 'pending' || o.status === 'accepted');
+  const activeOrders = mozoOrders.filter(o => o.status === 'pending' || o.status === 'accepted' || o.status === 'ready');
 
   // Predefined standard tables list
   const defaultTables = activeMozo?.assignedTables && activeMozo.assignedTables.length > 0
@@ -301,6 +301,7 @@ export const MozoPortal: React.FC = () => {
             {allTables.map(table => {
               const tableActiveOrders = getTableActiveOrders(table);
               const isActive = tableActiveOrders.length > 0;
+              const hasReadyOrder = tableActiveOrders.some(o => o.status === 'ready');
               const isSelected = selectedTable === table;
 
               return (
@@ -313,11 +314,17 @@ export const MozoPortal: React.FC = () => {
                     padding: '20px 10px',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    background: isActive 
-                      ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
-                      : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
-                    color: isActive ? 'white' : '#546e7a',
-                    boxShadow: isActive ? '0 4px 8px rgba(76, 175, 80, 0.25)' : 'none',
+                    background: hasReadyOrder
+                      ? 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)'
+                      : isActive 
+                        ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' 
+                        : 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
+                    color: (isActive || hasReadyOrder) ? 'white' : '#546e7a',
+                    boxShadow: hasReadyOrder
+                      ? '0 4px 12px rgba(255, 152, 0, 0.4)'
+                      : isActive 
+                        ? '0 4px 8px rgba(76, 175, 80, 0.25)' 
+                        : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -339,7 +346,7 @@ export const MozoPortal: React.FC = () => {
                         fontWeight: 'bold',
                         animation: 'pulse 1.5s infinite'
                       }}>
-                        {tableActiveOrders.length} {tableActiveOrders.length === 1 ? 'Pedido' : 'Pedidos'}
+                        {hasReadyOrder ? '🔔 ¡LISTO!' : `${tableActiveOrders.length} ${tableActiveOrders.length === 1 ? 'Pedido' : 'Pedidos'}`}
                       </span>
                       {(() => {
                         const oldestOrder = tableActiveOrders.reduce((oldest, current) => {
@@ -370,7 +377,11 @@ export const MozoPortal: React.FC = () => {
               );
             })}
           </div>
-          <div style={{ display: 'flex', gap: '15px', fontSize: '0.8rem', color: '#666', marginTop: '15px', paddingLeft: '5px' }}>
+          <div style={{ display: 'flex', gap: '15px', fontSize: '0.8rem', color: '#666', marginTop: '15px', paddingLeft: '5px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)' }}></span>
+              <span>Comida Lista (Retirar)</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)' }}></span>
               <span>Mesa con pedidos activos</span>
@@ -425,7 +436,13 @@ export const MozoPortal: React.FC = () => {
                       borderRadius: '8px',
                       padding: '15px',
                       border: '1px solid #e2e8f0',
-                      borderLeft: `5px solid ${order.status === 'pending' ? '#ffc107' : '#da251d'}`
+                      borderLeft: `5px solid ${
+                        order.status === 'pending' 
+                          ? '#ffc107' 
+                          : order.status === 'ready' 
+                            ? '#4caf50' 
+                            : '#da251d'
+                      }`
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -436,10 +453,19 @@ export const MozoPortal: React.FC = () => {
                           borderRadius: '20px',
                           fontWeight: 'bold',
                           color: order.status === 'pending' ? '#856404' : '#fff',
-                          backgroundColor: order.status === 'pending' ? '#fff3cd' : '#da251d',
-                          marginRight: '10px'
+                          backgroundColor: order.status === 'pending' 
+                            ? '#fff3cd' 
+                            : order.status === 'ready' 
+                              ? '#4caf50' 
+                              : '#da251d',
+                          marginRight: '10px',
+                          animation: order.status === 'ready' ? 'pulse 1.5s infinite' : 'none'
                         }}>
-                          {order.status === 'pending' ? 'Pendiente en Admin' : 'En Cocina / Preparación'}
+                          {order.status === 'pending' 
+                            ? 'Pendiente en Admin' 
+                            : order.status === 'ready' 
+                              ? '🚨 ¡LISTO PARA RETIRAR!' 
+                              : 'En Cocina / Preparación'}
                         </span>
                         <span style={{ fontSize: '0.8rem', color: '#666' }}>
                           Ref: #{order.id.slice(-5)}
