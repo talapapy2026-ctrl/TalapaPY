@@ -80,11 +80,7 @@ export const Admin: React.FC = () => {
   });
   const [generatedQR, setGeneratedQR] = useState<{ url: string; scanUrl: string } | null>(null);
 
-  // Delivery QR States
-  const [deliveryBaseUrl, setDeliveryBaseUrl] = useState(() => {
-    return window.location.origin + window.location.pathname.replace(/\/$/, '');
-  });
-  const [generatedDeliveryQR, setGeneratedDeliveryQR] = useState<{ url: string; scanUrl: string } | null>(null);
+
 
   // Track pending orders count for sound alert triggering
   const lastPendingCountRef = useRef(0);
@@ -278,17 +274,7 @@ export const Admin: React.FC = () => {
     });
   };
 
-  const handleGenerateDeliveryQR = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanUrl = deliveryBaseUrl.trim().replace(/\/$/, '');
-    const scanUrl = `${cleanUrl}/#/?delivery=true`;
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(scanUrl)}`;
-    
-    setGeneratedDeliveryQR({
-      url: qrApiUrl,
-      scanUrl: scanUrl
-    });
-  };
+
 
   // Print comanda logic
   const handlePrintOrder = (order: QRWaitOrder) => {
@@ -1234,121 +1220,7 @@ export const Admin: React.FC = () => {
                   )}
                 </div>
 
-                {/* Delivery QR Generator Card */}
-                <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                  <h2 style={{ fontFamily: 'Oswald', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <QrCode size={18} color="var(--primary-red)" />
-                    Generador de QR / Enlace de Delivery
-                  </h2>
-                  <form onSubmit={handleGenerateDeliveryQR} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.85rem', color: '#666', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span>Enlace Público (Ej: LocalTunnel / ngrok)</span>
-                        {deliveryBaseUrl.includes('localhost') && (
-                          <span style={{ fontSize: '0.75rem', color: '#d97706', fontWeight: 'bold' }}>
-                            ⚠️ Recuerda ingresar tu enlace público (ej. https://talapaburger.loca.lt) para que funcione en todo el mundo.
-                          </span>
-                        )}
-                      </label>
-                      <input 
-                        type="text" 
-                        className="form-control" 
-                        placeholder="Ej: https://talapaburger.loca.lt"
-                        value={deliveryBaseUrl} 
-                        onChange={e => {
-                          setDeliveryBaseUrl(e.target.value);
-                          setGeneratedDeliveryQR(null);
-                        }}
-                        required 
-                      />
-                    </div>
 
-                    <button type="submit" className="btn btn-secondary" style={{ width: '100%' }}>
-                      Generar QR de Delivery
-                    </button>
-                  </form>
-
-                  {generatedDeliveryQR && (
-                    <div style={{ marginTop: '20px', padding: '15px', background: '#fafafa', borderRadius: '8px', border: '1px solid #eee', textAlign: 'center' }}>
-                      <h3 style={{ fontFamily: 'Oswald', fontSize: '1rem', marginBottom: '10px', color: '#da251d' }}>
-                        QR DE DELIVERY LISTO
-                      </h3>
-                      
-                      <div style={{ background: 'white', padding: '15px', borderRadius: '8px', display: 'inline-block', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', marginBottom: '10px' }}>
-                        <img src={generatedDeliveryQR.url} alt="QR Code Delivery" style={{ width: '180px', height: '180px' }} />
-                      </div>
-
-                      <div style={{ fontSize: '0.75rem', color: '#333', fontWeight: 'bold', wordBreak: 'break-all', marginBottom: '15px', background: '#fff', padding: '8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        {generatedDeliveryQR.scanUrl}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(generatedDeliveryQR.scanUrl);
-                            alert('¡Enlace de Delivery copiado al portapapeles!');
-                          }}
-                          className="btn btn-secondary"
-                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px' }}
-                        >
-                          Copiar Enlace
-                        </button>
-                        
-                        <button
-                          onClick={() => {
-                            const iframe = document.createElement('iframe');
-                            iframe.style.position = 'absolute';
-                            iframe.style.width = '0px';
-                            iframe.style.height = '0px';
-                            iframe.style.border = 'none';
-                            iframe.style.top = '-9999px';
-                            document.body.appendChild(iframe);
-
-                            const doc = iframe.contentWindow?.document || iframe.contentDocument;
-                            if (doc) {
-                              doc.open();
-                              doc.write(`
-                                <html>
-                                  <head>
-                                    <title>Imprimir QR Delivery</title>
-                                    <style>
-                                      body { font-family: sans-serif; text-align: center; padding: 40px; }
-                                      .frame { border: 4px solid #da251d; border-radius: 20px; padding: 30px; display: inline-block; }
-                                      h1 { font-family: 'Oswald', sans-serif; margin: 0 0 10px 0; color: #da251d; }
-                                      h2 { margin: 0 0 20px 0; color: #333; }
-                                      .footer { margin-top: 20px; font-weight: bold; color: #666; font-size: 1.1rem; }
-                                    </style>
-                                  </head>
-                                  <body>
-                                    <div class="frame">
-                                      <h1>TALAPA BURGER</h1>
-                                      <h2>DELIVERY & RETIRO</h2>
-                                      <img src="${generatedDeliveryQR.url}" style="width: 250px; height: 250px" />
-                                      <div class="footer">ESCANEE PARA PEDIR ONLINE</div>
-                                    </div>
-                                  </body>
-                                </html>
-                              `);
-                              doc.close();
-
-                              setTimeout(() => {
-                                iframe.contentWindow?.focus();
-                                iframe.contentWindow?.print();
-                                setTimeout(() => {
-                                  document.body.removeChild(iframe);
-                                }, 1000);
-                              }, 500);
-                            }
-                          }}
-                          className="btn btn-primary"
-                          style={{ flex: 1, fontSize: '0.85rem', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                        >
-                          <Printer size={14} /> Imprimir Cartel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
 
             </div>
