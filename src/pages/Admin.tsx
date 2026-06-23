@@ -17,7 +17,7 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -273,6 +273,34 @@ export const Admin: React.FC = () => {
       deleteMozo(id);
       setMozos(getMozos());
       if (qrMozoId === id) setGeneratedQR(null);
+    }
+  };
+
+  const handleDeleteTable = (mozoId: string, tableToDelete: string) => {
+    if (!window.confirm(`¿Está seguro de eliminar la ${tableToDelete}?`)) return;
+    
+    const chosenMozo = mozos.find(m => m.id === mozoId);
+    if (!chosenMozo) return;
+
+    const updatedTables = (chosenMozo.assignedTables || []).filter(
+      t => t.toLowerCase() !== tableToDelete.toLowerCase()
+    );
+    
+    const updatedMozos = mozos.map(m => {
+      if (m.id === mozoId) {
+        return {
+          ...m,
+          assignedTables: updatedTables
+        };
+      }
+      return m;
+    });
+    
+    saveMozos(updatedMozos);
+    setMozos(updatedMozos);
+    
+    if (selectedMonitoredTable === tableToDelete) {
+      setSelectedMonitoredTable(null);
     }
   };
 
@@ -1143,9 +1171,39 @@ export const Admin: React.FC = () => {
                                       padding: '10px', 
                                       borderRadius: '10px', 
                                       border: '1px solid #e2e8f0',
-                                      boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
+                                      boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+                                      position: 'relative'
                                     }}
                                   >
+                                    {/* Close/Delete Table Button */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTable(selectedMonitoredMozo.id, table);
+                                      }}
+                                      style={{
+                                        position: 'absolute',
+                                        top: '-6px',
+                                        right: '-6px',
+                                        background: '#fee2e2',
+                                        border: '1px solid #fecaca',
+                                        color: '#ef4444',
+                                        borderRadius: '50%',
+                                        width: '20px',
+                                        height: '20px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                        padding: 0,
+                                        zIndex: 10
+                                      }}
+                                      title="Eliminar Mesa"
+                                    >
+                                      <X size={12} strokeWidth={3} />
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedMonitoredTable(isSelected ? null : table)}
