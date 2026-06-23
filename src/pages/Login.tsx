@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getMozos } from '../store';
 import type { Mozo } from '../types';
-import { ChefHat, ShieldAlert, KeyRound, User, Lock } from 'lucide-react';
+import { ChefHat, ShieldAlert, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +19,10 @@ export const Login: React.FC = () => {
   const [selectedMozoId, setSelectedMozoId] = useState('');
   const [mozoPin, setMozoPin] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showCocinaPassword, setShowCocinaPassword] = useState(false);
+  const [showMozoPin, setShowMozoPin] = useState(false);
 
   useEffect(() => {
     setMozos(getMozos());
@@ -203,7 +207,7 @@ export const Login: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <Lock size={18} color="#888" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
-                  type="password"
+                  type={showAdminPassword ? "text" : "password"}
                   className="form-control"
                   placeholder="Ingrese contraseña"
                   value={adminPassword}
@@ -213,12 +217,33 @@ export const Login: React.FC = () => {
                     backgroundColor: '#2a2a2a',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     color: '#fff',
-                    padding: '12px 12px 12px 40px',
+                    padding: '12px 40px 12px 40px',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     width: '100%'
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#888',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                  title={showAdminPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px', display: 'block' }}>
                 * La clave por defecto es <strong>admin</strong>
@@ -269,7 +294,7 @@ export const Login: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <KeyRound size={18} color="#888" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
-                  type="password"
+                  type={showMozoPin ? "text" : "password"}
                   className="form-control"
                   placeholder="Ingrese PIN"
                   maxLength={6}
@@ -280,12 +305,33 @@ export const Login: React.FC = () => {
                     backgroundColor: '#2a2a2a',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     color: '#fff',
-                    padding: '12px 12px 12px 40px',
+                    padding: '12px 40px 12px 40px',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     width: '100%'
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowMozoPin(!showMozoPin)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#888',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                  title={showMozoPin ? "Ocultar PIN" : "Mostrar PIN"}
+                >
+                  {showMozoPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -307,7 +353,7 @@ export const Login: React.FC = () => {
               <div style={{ position: 'relative' }}>
                 <Lock size={18} color="#888" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
-                  type="password"
+                  type={showCocinaPassword ? "text" : "password"}
                   className="form-control"
                   placeholder="Ingrese contraseña"
                   value={cocinaPassword}
@@ -317,12 +363,33 @@ export const Login: React.FC = () => {
                     backgroundColor: '#2a2a2a',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     color: '#fff',
-                    padding: '12px 12px 12px 40px',
+                    padding: '12px 40px 12px 40px',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     width: '100%'
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowCocinaPassword(!showCocinaPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#888',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                  title={showCocinaPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showCocinaPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '5px', display: 'block' }}>
                 * La clave por defecto es <strong>cocina</strong>
