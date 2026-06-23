@@ -1,0 +1,268 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "title": "Combo Cheeseburger",
+      "description": "Doble Carne, Cheddar, Cebollita, Ketchup & Mayonesa.",
+      "price": 43000,
+      "category": "clasica",
+      "imageUrl": "/cheeseburger.png"
+    },
+    {
+      "id": "2",
+      "title": "Combo American",
+      "description": "Doble Carne, Cheddar, Tomate, Lechuga, Cebolla, Pepinillo & Salsa Mil Islas.",
+      "price": 45000,
+      "category": "clasica",
+      "imageUrl": "/american_burger.png"
+    },
+    {
+      "id": "3",
+      "title": "Papa Mediana",
+      "description": "Papas Fritas Corte Fino.",
+      "price": 8000,
+      "category": "extras",
+      "imageUrl": "/french_fries.png"
+    },
+    {
+      "id": "4",
+      "title": "Salsa Cheddar",
+      "description": "Cheddar Derretido.",
+      "price": 5000,
+      "category": "salsas",
+      "imageUrl": "/french_fries.png"
+    }
+  ],
+  "heroData": {
+    "titleWhite": "Auténtica",
+    "titleRed": "Smash Burger",
+    "subtitle": "CALIDAD PREMIUM",
+    "imageUrl": "/hero_model.png"
+  },
+  "sales": [
+    {
+      "id": "1782160916693-2-vy16",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-i0fz",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-zndc",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-jp4b",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-z94c",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-2w8y",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-mafo",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-270l",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-kmkh",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-0cow",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-513a",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-6bpx",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-quu4",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-oph7",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-xhmi",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-x04x",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782160916693-2-4bwv",
+      "productId": "2",
+      "date": "2026-06-22T20:41:56.693Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782168445651-1-ikz7",
+      "productId": "1",
+      "date": "2026-06-22T22:47:25.651Z",
+      "quantity": 1,
+      "total": 43000
+    },
+    {
+      "id": "1782168445651-2-zp5r",
+      "productId": "2",
+      "date": "2026-06-22T22:47:25.651Z",
+      "quantity": 1,
+      "total": 45000
+    },
+    {
+      "id": "1782168445651-3-8prr",
+      "productId": "3",
+      "date": "2026-06-22T22:47:25.651Z",
+      "quantity": 1,
+      "total": 8000
+    }
+  ],
+  "editMode": false,
+  "mozos": [
+    {
+      "id": "1782160879236",
+      "name": "diego ",
+      "code": "1111",
+      "createdAt": "2026-06-22T20:41:19.236Z",
+      "assignedTables": []
+    }
+  ],
+  "qrOrders": [
+    {
+      "id": "1782160916693",
+      "mozoId": "1782160879236",
+      "mozoName": "diego ",
+      "tableNumber": "1",
+      "items": [
+        {
+          "productId": "2",
+          "title": "Combo American",
+          "price": 45000,
+          "quantity": 1
+        }
+      ],
+      "total": 45000,
+      "status": "completed",
+      "date": "2026-06-22T20:41:56.693Z",
+      "printed": true
+    },
+    {
+      "id": "1782168445651",
+      "mozoId": "1782160879236",
+      "mozoName": "diego ",
+      "tableNumber": "Mesa 4",
+      "items": [
+        {
+          "productId": "1",
+          "title": "Combo Cheeseburger",
+          "price": 43000,
+          "quantity": 1
+        },
+        {
+          "productId": "2",
+          "title": "Combo American",
+          "price": 45000,
+          "quantity": 1
+        },
+        {
+          "productId": "3",
+          "title": "Papa Mediana",
+          "price": 8000,
+          "quantity": 1
+        }
+      ],
+      "total": 96000,
+      "status": "completed",
+      "date": "2026-06-22T22:47:25.651Z",
+      "printed": true
+    },
+    {
+      "id": "1782174885628",
+      "mozoId": "online",
+      "mozoName": "CLIENTE (ONLINE)",
+      "tableNumber": "DELIVERY",
+      "items": [
+        {
+          "productId": "1",
+          "title": "Combo Cheeseburger",
+          "price": 43000,
+          "quantity": 1
+        }
+      ],
+      "total": 43000,
+      "status": "pending",
+      "date": "2026-06-23T00:34:45.628Z",
+      "printed": false,
+      "deliveryDetails": {
+        "customerName": "John Doe",
+        "phone": "0981999999",
+        "type": "delivery",
+        "address": "Av. Espana 1234, Asuncion"
+      }
+    }
+  ]
+}
