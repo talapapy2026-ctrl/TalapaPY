@@ -192,6 +192,27 @@ export const Landing: React.FC = () => {
     };
 
     addQROrder(newOrder);
+
+    // Launch WhatsApp message if in deliveryMode (Online Customer)
+    if (deliveryMode) {
+      let msg = `*🍔 TALAPA BURGER - NUEVO PEDIDO 🍔*\n\n`;
+      msg += `*Cliente:* ${customerName}\n`;
+      msg += `*Teléfono:* ${phone}\n`;
+      msg += `*Tipo:* ${deliveryType === 'delivery' ? '🛵 Delivery' : '🥡 Retiro Local'}\n`;
+      if (deliveryType === 'delivery') {
+        msg += `*Dirección:* ${deliveryAddress}\n`;
+      }
+      msg += `\n*--- DETALLE DEL PEDIDO ---*\n`;
+      cart.forEach(item => {
+        msg += `• ${item.quantity}x ${item.product.title} (Gs. ${item.product.price.toLocaleString()}) = Gs. ${(item.product.price * item.quantity).toLocaleString()}\n`;
+      });
+      msg += `\n*TOTAL A PAGAR: Gs. ${total.toLocaleString()}*\n\n`;
+      msg += `¡Muchas gracias!`;
+
+      const waUrl = `https://wa.me/595981874120?text=${encodeURIComponent(msg)}`;
+      window.open(waUrl, '_blank');
+    }
+
     setCart([]);
     setIsCartOpen(false);
     setOrderSentSuccess(true);
