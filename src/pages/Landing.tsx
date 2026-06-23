@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getProducts, getHeroData, getEditMode, saveProducts, getMozos, addQROrder } from '../store';
 import type { Product, HeroData, QRWaitOrder, OrderItem, Mozo } from '../types';
 import { ShoppingBag, Plus, Minus, Trash2, X, Check } from 'lucide-react';
@@ -16,6 +16,7 @@ const formatImageUrl = (url: string) => {
 
 export const Landing: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [hero, setHero] = useState<HeroData>(getHeroData());
   const [isEditMode, setIsEditMode] = useState(false);
@@ -253,9 +254,15 @@ export const Landing: React.FC = () => {
           SESIÓN MOZO: {loggedMozo.name.toUpperCase()} (TOMA DE PEDIDOS DIRECTA)
           <button 
             onClick={() => {
-              localStorage.removeItem('talapa_logged_mozo_id');
-              setLoggedMozo(null);
-              setMozoName('');
+              const pin = window.prompt("Ingrese su PIN de acceso de Mozo para cerrar sesión:");
+              if (pin === null) return; // User cancelled
+              if (pin === loggedMozo.code) {
+                localStorage.removeItem('talapa_logged_mozo_id');
+                setLoggedMozo(null);
+                setMozoName('');
+              } else {
+                alert("PIN incorrecto");
+              }
             }}
             style={{
               background: 'rgba(255, 255, 255, 0.2)',
@@ -282,9 +289,31 @@ export const Landing: React.FC = () => {
             </Link>
           )}
           {!mozoIdParam && loggedMozo && (
-            <Link to={`/mozo?mozoId=${loggedMozo.id}`} style={{ color: 'white', textDecoration: 'none', opacity: 0.8, fontSize: '0.9rem', border: '1px solid white', padding: '5px 10px', borderRadius: '4px' }}>
+            <button 
+              onClick={() => {
+                const pin = window.prompt("Ingrese su PIN de acceso para ver sus pedidos:");
+                if (pin === null) return; // User cancelled
+                if (pin === loggedMozo.code) {
+                  navigate(`/mozo?mozoId=${loggedMozo.id}`);
+                } else {
+                  alert("PIN incorrecto");
+                }
+              }}
+              style={{
+                color: 'white',
+                textDecoration: 'none',
+                opacity: 0.8,
+                fontSize: '0.9rem',
+                border: '1px solid white',
+                padding: '5px 10px',
+                borderRadius: '4px',
+                background: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
               Ver mis pedidos
-            </Link>
+            </button>
           )}
           {!loggedMozo && !mozoIdParam && (
             <Link to="/login" style={{ color: 'white', textDecoration: 'none', opacity: 0.8, fontSize: '0.9rem' }}>Ingresar Usuario</Link>
