@@ -41,7 +41,8 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     
-    if (cocinaPassword === 'cocina') {
+    const correctPassword = localStorage.getItem('talapa_cocina_password') || 'cocina';
+    if (cocinaPassword === correctPassword) {
       localStorage.setItem('talapa_cocina_logged', 'true');
       navigate('/admin');
     } else {

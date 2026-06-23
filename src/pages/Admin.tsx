@@ -17,7 +17,7 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +36,18 @@ export const Admin: React.FC = () => {
   // Edit mode badge indicator
   const [editModeActive, setEditModeActive] = useState(false);
   const [isCocina, setIsCocina] = useState(false);
+
+  // Kitchen password configuration state
+  const [cocinaPasswordSetting, setCocinaPasswordSetting] = useState(() => localStorage.getItem('talapa_cocina_password') || 'cocina');
+  const [cocinaPasswordSavedMessage, setCocinaPasswordSavedMessage] = useState('');
+
+  const handleSaveCocinaPassword = () => {
+    localStorage.setItem('talapa_cocina_password', cocinaPasswordSetting);
+    setCocinaPasswordSavedMessage('Contraseña de cocina actualizada correctamente.');
+    setTimeout(() => {
+      setCocinaPasswordSavedMessage('');
+    }, 4000);
+  };
 
   // New Mozo Fields
   const [newMozoName, setNewMozoName] = useState('');
@@ -929,6 +941,38 @@ export const Admin: React.FC = () => {
                     </div>
                     <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-end', padding: '10px 20px' }}>Registrar Mozo</button>
                   </form>
+                </div>
+
+                {/* Kitchen Password Setting */}
+                <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                  <h2 style={{ fontFamily: 'Oswald', fontSize: '1.2rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Lock size={18} color="var(--primary-red)" />
+                    Contraseña de Acceso a Cocina
+                  </h2>
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.8rem', color: '#666', marginBottom: '5px', display: 'block' }}>Nueva Contraseña</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder="Contraseña (Ej: cocina123)"
+                        value={cocinaPasswordSetting} 
+                        onChange={e => setCocinaPasswordSetting(e.target.value)} 
+                      />
+                    </div>
+                    <button 
+                      onClick={handleSaveCocinaPassword} 
+                      className="btn btn-primary" 
+                      style={{ padding: '10px 20px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      Guardar Contraseña
+                    </button>
+                  </div>
+                  {cocinaPasswordSavedMessage && (
+                    <div style={{ color: '#2e7d32', fontSize: '0.85rem', marginTop: '10px', fontWeight: 'bold' }}>
+                      {cocinaPasswordSavedMessage}
+                    </div>
+                  )}
                 </div>
 
                 {/* Waiter table list */}
