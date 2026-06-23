@@ -23,7 +23,7 @@ export const Landing: React.FC = () => {
 
   // Delivery States - Securely enforce delivery/takeout mode for external clients
   const hasTableSession = !!mozoIdParam || !!mesaParam || !!localStorage.getItem('talapa_logged_mozo_id');
-  const [deliveryMode, setDeliveryMode] = useState(!hasTableSession);
+  const deliveryMode = !hasTableSession;
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
@@ -574,43 +574,6 @@ export const Landing: React.FC = () => {
             {cart.length > 0 && (
               <div style={{ padding: '20px', borderTop: '1px solid #eee', background: '#fafafa' }}>
                 <form onSubmit={handlePlaceOrder}>
-                  {/* Local / Delivery Toggle - Solo visible si hay sesión de mesa o mozo activa */}
-                  {hasTableSession && (
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryMode(false)}
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          borderRadius: '8px',
-                          border: '1px solid #ccc',
-                          backgroundColor: !deliveryMode ? '#da251d' : '#fff',
-                          color: !deliveryMode ? '#fff' : '#333',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Comer en Local
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeliveryMode(true)}
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          borderRadius: '8px',
-                          border: '1px solid #ccc',
-                          backgroundColor: deliveryMode ? '#da251d' : '#fff',
-                          color: deliveryMode ? '#fff' : '#333',
-                          fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Delivery / Retiro
-                      </button>
-                    </div>
-                  )}
 
                   {!deliveryMode ? (
                     <div className="form-group" style={{ marginBottom: '15px' }}>
