@@ -374,6 +374,109 @@ export const Admin: React.FC = () => {
 
 
 
+  const handlePrintTableAccount = (table: string, mozoName: string, tableActiveOrders: QRWaitOrder[]) => {
+    const consolidatedItems: Record<string, { title: string; quantity: number; price: number }> = {};
+    tableActiveOrders.forEach(order => {
+      order.items.forEach(item => {
+        const key = item.productId || item.title;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += item.quantity;
+        } else {
+          consolidatedItems[key] = {
+            title: item.title,
+            quantity: item.quantity,
+            price: item.price
+          };
+        }
+      });
+    });
+
+    const grandTotal = tableActiveOrders.reduce((sum, o) => sum + o.total, 0);
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.top = '-9999px';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <html>
+          <head>
+            <title>Precuenta - ${table}</title>
+            <style>
+              body { 
+                font-family: 'Courier New', Courier, monospace; 
+                width: 280px; 
+                margin: 0 auto; 
+                padding: 10px; 
+                font-size: 13px; 
+                color: black; 
+              }
+              .center { text-align: center; }
+              .divider { border-top: 1px dashed black; margin: 8px 0; }
+              .bold { font-weight: bold; }
+              .right { text-align: right; }
+              table { width: 100%; border-collapse: collapse; }
+              td { padding: 3px 0; }
+            </style>
+          </head>
+          <body>
+            <h2 class="center" style="margin:0 0 5px 0;">TALAPA BURGER</h2>
+            <h3 class="center" style="margin:0 0 5px 0;">PRECUENTA</h3>
+            <div class="divider"></div>
+            <div><strong>FECHA:</strong> ${new Date().toLocaleString()}</div>
+            <div><strong>MESA:</strong> ${table.toUpperCase()}</div>
+            <div><strong>MOZO:</strong> ${mozoName}</div>
+            <div class="divider"></div>
+            <table>
+              <thead>
+                <tr style="border-bottom: 1px dashed black;">
+                  <th align="left">CANT</th>
+                  <th align="left">PRODUCTO</th>
+                  <th align="right">SUBT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.values(consolidatedItems).map(item => `
+                  <tr>
+                    <td>${item.quantity}</td>
+                    <td>${item.title}</td>
+                    <td align="right">${(item.price * item.quantity).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="divider"></div>
+            <div class="right bold" style="font-size: 15px;">TOTAL: Gs. ${grandTotal.toLocaleString()}</div>
+            <div class="divider"></div>
+            <h3 class="center" style="margin:10px 0 0 0;">¡GRACIAS POR SU VISITA!</h3>
+          </body>
+        </html>
+      `);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 500);
+    }
+  };
+
+  const handleCloseTable = (tableActiveOrders: QRWaitOrder[]) => {
+    if (!window.confirm('¿Está seguro de cerrar la cuenta?')) return;
+    tableActiveOrders.forEach(order => {
+      updateQROrderStatus(order.id, 'closed');
+    });
+    setQrOrders(getQROrders());
+    setSelectedMonitoredTable(null);
+    alert('Mesa cerrada y cuenta restablecida a cero.');
+  };
+
   // Print comanda logic
   const handlePrintOrder = (order: QRWaitOrder) => {
     markOrderAsPrinted(order.id);
@@ -1182,7 +1285,7 @@ export const Admin: React.FC = () => {
                             {(() => {
                               const defaultTables = selectedMonitoredMozo.assignedTables || [];
 
-                              const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready'));
+                              const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready' || o.status === 'completed'));
                               
                               const customActiveTables = Array.from(
                                 new Set(
@@ -1266,7 +1369,7 @@ export const Admin: React.FC = () => {
                                         background: (() => {
                                           const hasPending = tableActiveOrders.some(o => o.status === 'pending');
                                           const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
-                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready' || o.status === 'completed');
                                           
                                           if (hasPending) {
                                             return 'linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%)'; // Yellow
@@ -1280,7 +1383,7 @@ export const Admin: React.FC = () => {
                                         color: (() => {
                                           const hasPending = tableActiveOrders.some(o => o.status === 'pending');
                                           const hasAccepted = tableActiveOrders.some(o => o.status === 'accepted');
-                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready');
+                                          const hasReady = tableActiveOrders.some(o => o.status === 'ready' || o.status === 'completed');
                                           
                                           if (hasPending) return '#111';
                                           if (hasAccepted || hasReady) return 'white';
@@ -1394,50 +1497,109 @@ export const Admin: React.FC = () => {
                                 PEDIDOS ACTIVOS EN {selectedMonitoredTable.toUpperCase()}
                               </h4>
                               {(() => {
-                                const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready'));
+                                const activeMozoOrders = qrOrders.filter(o => o.mozoId === selectedMonitoredMozo.id && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready' || o.status === 'completed'));
                                 const tableActiveOrders = activeMozoOrders.filter(o => o.tableNumber.toLowerCase() === selectedMonitoredTable.toLowerCase());
 
                                 if (tableActiveOrders.length === 0) {
                                   return <p style={{ fontSize: '0.8rem', color: '#888', margin: 0 }}>Mesa sin consumos activos actualmente.</p>;
                                 }
 
+                                const grandTotal = tableActiveOrders.reduce((sum, o) => sum + o.total, 0);
+
                                 return (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {tableActiveOrders.map(order => (
-                                      <div key={order.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', fontSize: '0.85rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                          <span style={{
-                                            fontSize: '0.7rem',
-                                            padding: '2px 6px',
-                                            borderRadius: '10px',
-                                            fontWeight: 'bold',
-                                            color: order.status === 'pending' ? '#856404' : '#fff',
-                                            backgroundColor: order.status === 'pending' 
-                                              ? '#fff3cd' 
-                                              : order.status === 'ready' 
-                                                ? '#ff9800' 
-                                                : '#2e7d32'
-                                          }}>
-                                            {order.status === 'pending' 
-                                              ? 'Pendiente' 
-                                              : order.status === 'ready' 
-                                                ? 'Listo' 
-                                                : 'En Cocina'}
-                                          </span>
-                                          <span style={{ color: '#888', fontSize: '0.75rem' }}>Ref: #{order.id.slice(-5)}</span>
-                                        </div>
-                                        {order.items.map((it, idx) => (
-                                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#555', padding: '2px 0' }}>
-                                            <span>{it.quantity}x {it.title}</span>
-                                            <span>Gs. {(it.price * it.quantity).toLocaleString()}</span>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {tableActiveOrders.map(order => (
+                                        <div key={order.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', fontSize: '0.85rem' }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                            <span style={{
+                                              fontSize: '0.7rem',
+                                              padding: '2px 6px',
+                                              borderRadius: '10px',
+                                              fontWeight: 'bold',
+                                              color: order.status === 'pending' ? '#856404' : '#fff',
+                                              backgroundColor: order.status === 'pending' 
+                                                ? '#fff3cd' 
+                                                : order.status === 'ready' 
+                                                  ? '#ff9800' 
+                                                  : '#2e7d32'
+                                            }}>
+                                              {order.status === 'pending' 
+                                                ? 'Pendiente' 
+                                                : order.status === 'ready' 
+                                                  ? 'Listo' 
+                                                  : 'En Cocina'}
+                                            </span>
+                                            <span style={{ color: '#888', fontSize: '0.75rem' }}>Ref: #{order.id.slice(-5)}</span>
                                           </div>
-                                        ))}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #f1f5f9', paddingTop: '5px', marginTop: '5px' }}>
-                                          <span>Total:</span>
-                                          <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
+                                          {order.items.map((it, idx) => (
+                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#555', padding: '2px 0' }}>
+                                              <span>{it.quantity}x {it.title}</span>
+                                              <span>Gs. {(it.price * it.quantity).toLocaleString()}</span>
+                                            </div>
+                                          ))}
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #f1f5f9', paddingTop: '5px', marginTop: '5px' }}>
+                                            <span>Total Pedido:</span>
+                                            <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
+                                          </div>
                                         </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Grand Total and Actions */}
+                                    <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '10px', marginTop: '5px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1rem', marginBottom: '12px' }}>
+                                        <span>Total Cuenta Mesa:</span>
+                                        <span style={{ color: 'var(--primary-red)', fontSize: '1.1rem' }}>Gs. {grandTotal.toLocaleString()}</span>
                                       </div>
-                                    ))}
+                                      
+                                      <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handlePrintTableAccount(selectedMonitoredTable, selectedMonitoredMozo.name, tableActiveOrders)}
+                                          className="btn"
+                                          style={{
+                                            flex: 1,
+                                            padding: '8px 12px',
+                                            background: '#0284c7',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '5px',
+                                            fontSize: '0.8rem'
+                                          }}
+                                        >
+                                          <Printer size={14} /> Imprimir Cuenta
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCloseTable(tableActiveOrders)}
+                                          className="btn"
+                                          style={{
+                                            flex: 1,
+                                            padding: '8px 12px',
+                                            background: 'var(--primary-red)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '5px',
+                                            fontSize: '0.8rem'
+                                          }}
+                                        >
+                                          <Check size={14} /> Cerrar Mesa
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               })()}

@@ -47,7 +47,7 @@ export interface QRWaitOrder {
   tableNumber: string;
   items: OrderItem[];
   total: number;
-  status: 'pending' | 'accepted' | 'ready' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'ready' | 'completed' | 'cancelled' | 'closed';
   date: string;
   printed: boolean;
   deliveryDetails?: {

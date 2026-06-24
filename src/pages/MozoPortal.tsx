@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getMozos, getQROrders, updateQROrderStatus } from '../store';
 import type { Mozo, QRWaitOrder } from '../types';
-import { Clock, Check, LogOut, RefreshCw, ChefHat, LayoutGrid, PlusCircle, ArrowLeft } from 'lucide-react';
+import { Clock, Check, LogOut, RefreshCw, ChefHat, LayoutGrid, PlusCircle, ArrowLeft, Printer } from 'lucide-react';
 
 export const MozoPortal: React.FC = () => {
   const navigate = useNavigate();
@@ -103,9 +103,112 @@ export const MozoPortal: React.FC = () => {
     refreshOrders();
   };
 
+  const handlePrintTableAccount = (table: string, mozoName: string, tableActiveOrders: QRWaitOrder[]) => {
+    const consolidatedItems: Record<string, { title: string; quantity: number; price: number }> = {};
+    tableActiveOrders.forEach(order => {
+      order.items.forEach(item => {
+        const key = item.productId || item.title;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += item.quantity;
+        } else {
+          consolidatedItems[key] = {
+            title: item.title,
+            quantity: item.quantity,
+            price: item.price
+          };
+        }
+      });
+    });
+
+    const grandTotal = tableActiveOrders.reduce((sum, o) => sum + o.total, 0);
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.top = '-9999px';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <html>
+          <head>
+            <title>Precuenta - ${table}</title>
+            <style>
+              body { 
+                font-family: 'Courier New', Courier, monospace; 
+                width: 280px; 
+                margin: 0 auto; 
+                padding: 10px; 
+                font-size: 13px; 
+                color: black; 
+              }
+              .center { text-align: center; }
+              .divider { border-top: 1px dashed black; margin: 8px 0; }
+              .bold { font-weight: bold; }
+              .right { text-align: right; }
+              table { width: 100%; border-collapse: collapse; }
+              td { padding: 3px 0; }
+            </style>
+          </head>
+          <body>
+            <h2 class="center" style="margin:0 0 5px 0;">TALAPA BURGER</h2>
+            <h3 class="center" style="margin:0 0 5px 0;">PRECUENTA</h3>
+            <div class="divider"></div>
+            <div><strong>FECHA:</strong> ${new Date().toLocaleString()}</div>
+            <div><strong>MESA:</strong> ${table.toUpperCase()}</div>
+            <div><strong>MOZO:</strong> ${mozoName}</div>
+            <div class="divider"></div>
+            <table>
+              <thead>
+                <tr style="border-bottom: 1px dashed black;">
+                  <th align="left">CANT</th>
+                  <th align="left">PRODUCTO</th>
+                  <th align="right">SUBT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.values(consolidatedItems).map(item => `
+                  <tr>
+                    <td>${item.quantity}</td>
+                    <td>${item.title}</td>
+                    <td align="right">${(item.price * item.quantity).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="divider"></div>
+            <div class="right bold" style="font-size: 15px;">TOTAL: Gs. ${grandTotal.toLocaleString()}</div>
+            <div class="divider"></div>
+            <h3 class="center" style="margin:10px 0 0 0;">¡GRACIAS POR SU VISITA!</h3>
+          </body>
+        </html>
+      `);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 500);
+    }
+  };
+
+  const handleCloseTable = (tableActiveOrders: QRWaitOrder[]) => {
+    if (!window.confirm('¿Está seguro de cerrar la cuenta?')) return;
+    tableActiveOrders.forEach(order => {
+      updateQROrderStatus(order.id, 'closed');
+    });
+    refreshOrders();
+    setSelectedTable(null);
+    alert('Mesa cerrada y cuenta restablecida a cero.');
+  };
+
   // Filter orders for the active Mozo
   const mozoOrders = orders.filter(o => o.mozoId === activeMozo?.id);
-  const activeOrders = mozoOrders.filter(o => o.status === 'pending' || o.status === 'accepted' || o.status === 'ready');
+  const activeOrders = mozoOrders.filter(o => o.status === 'pending' || o.status === 'accepted' || o.status === 'ready' || o.status === 'completed');
 
   // Predefined standard tables list
   const defaultTables = activeMozo?.assignedTables && activeMozo.assignedTables.length > 0
@@ -492,7 +595,9 @@ export const MozoPortal: React.FC = () => {
                             ? '#fff3cd' 
                             : order.status === 'ready' 
                               ? '#4caf50' 
-                              : '#da251d',
+                              : order.status === 'completed'
+                                ? '#334155'
+                                : '#da251d',
                           marginRight: '10px',
                           animation: order.status === 'ready' ? 'pulse 1.5s infinite' : 'none'
                         }}>
@@ -500,7 +605,9 @@ export const MozoPortal: React.FC = () => {
                             ? 'Pendiente en Admin' 
                             : order.status === 'ready' 
                               ? '🚨 ¡LISTO PARA RETIRAR!' 
-                              : 'En Cocina / Preparación'}
+                              : order.status === 'completed'
+                                ? '✓ Servido / Entregado'
+                                : 'En Cocina / Preparación'}
                         </span>
                         <span style={{ fontSize: '0.8rem', color: '#666' }}>
                           Ref: #{order.id.slice(-5)}
@@ -529,11 +636,14 @@ export const MozoPortal: React.FC = () => {
                         <div style={{ fontSize: '0.8rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '5px', background: '#fffbeb', padding: '8px', borderRadius: '4px' }}>
                           <Clock size={14} /> Esperando aprobación y comandado de la caja administradora...
                         </div>
+                      ) : order.status === 'completed' ? (
+                        <div style={{ fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px', background: '#f1f5f9', padding: '8px', borderRadius: '4px', fontWeight: 'bold' }}>
+                          ✓ Pedido ya entregado y servido a la mesa.
+                        </div>
                       ) : (
                         <button
                           onClick={() => {
                             handleUpdateStatus(order.id, 'completed');
-                            setSelectedTable(null);
                           }}
                           style={{
                             width: '100%',
@@ -557,6 +667,64 @@ export const MozoPortal: React.FC = () => {
                     </div>
                   </div>
                 ))}
+
+                {/* Grand Total and Table Actions */}
+                {(() => {
+                  const grandTotal = selectedTableOrders.reduce((sum, o) => sum + o.total, 0);
+                  return (
+                    <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '15px', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '15px' }}>
+                        <span>Total Cuenta Mesa:</span>
+                        <span style={{ color: 'var(--primary-red)', fontSize: '1.25rem' }}>Gs. {grandTotal.toLocaleString()}</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintTableAccount(selectedTable, activeMozo.name, selectedTableOrders)}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: '#0284c7',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          <Printer size={18} /> Imprimir Cuenta
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCloseTable(selectedTableOrders)}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: 'var(--primary-red)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            fontSize: '0.95rem'
+                          }}
+                        >
+                          <Check size={18} /> Cerrar Mesa
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
