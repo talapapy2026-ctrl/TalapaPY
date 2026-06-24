@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { getProducts, getHeroData, getEditMode, saveProducts, getMozos, addQROrder } from '../store';
+import { getProducts, getHeroData, getEditMode, saveProducts, getMozos, addQROrder, getQROrders } from '../store';
 import type { Product, HeroData, QRWaitOrder, OrderItem, Mozo } from '../types';
 import { ShoppingBag, Plus, Minus, Trash2, X, Check } from 'lucide-react';
 
@@ -40,6 +40,29 @@ export const Landing: React.FC = () => {
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [subGroupName, setSubGroupName] = useState('');
+  const [subGroupSelectMode, setSubGroupSelectMode] = useState<'select' | 'new'>('select');
+
+  // Find active sub-groups for the current table to show in a dropdown
+  const getActiveSubGroupsForTable = (): string[] => {
+    if (!tableNumber) return [];
+    try {
+      const activeOrders = getQROrders().filter(o => 
+        o.tableNumber.toLowerCase() === tableNumber.toLowerCase() && 
+        o.status !== 'closed' && 
+        o.status !== 'cancelled'
+      );
+      const groups = new Set<string>();
+      activeOrders.forEach(o => {
+        if (o.subGroup && o.subGroup.trim()) {
+          groups.add(o.subGroup.trim());
+        }
+      });
+      return Array.from(groups);
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  };
 
   useEffect(() => {
     setProducts(getProducts());
@@ -48,6 +71,11 @@ export const Landing: React.FC = () => {
     // Resolve sub-group parameter if present in query string
     const subGroup = searchParams.get('subGroup') || '';
     setSubGroupName(subGroup);
+    if (subGroup) {
+      setSubGroupSelectMode('new');
+    } else {
+      setSubGroupSelectMode('select');
+    }
 
     const resolveMozoSession = () => {
       const mozosList = getMozos();
@@ -668,18 +696,90 @@ export const Landing: React.FC = () => {
                       
                       {/* Sub-grupo / Identificación de cuenta opcional */}
                       <div style={{ marginTop: '12px' }}>
-                        <label style={{ fontSize: '0.9rem', color: '#333', fontWeight: 'bold' }}>¿Quién realiza el pedido? (Opcional)</label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          placeholder="Ej: Pareja 1, Juan, Grupo A..."
-                          value={subGroupName}
-                          onChange={(e) => setSubGroupName(e.target.value)}
-                          style={{ fontSize: '1rem', padding: '8px 12px' }}
-                        />
-                        <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '3px', display: 'block' }}>
-                          Permite dividir la cuenta e identificar qué consumió cada grupo/persona de la mesa.
-                        </span>
+                        <label style={{ fontSize: '0.9rem', color: '#333', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>
+                          ¿Quién realiza el pedido? (Opcional)
+                        </label>
+                        {(() => {
+                          const activeGroups = getActiveSubGroupsForTable();
+                          if (activeGroups.length === 0) {
+                            return (
+                              <>
+                                <input 
+                                  type="text" 
+                                  className="form-control" 
+                                  placeholder="Ej: Pareja 1, Juan..."
+                                  value={subGroupName}
+                                  onChange={(e) => setSubGroupName(e.target.value)}
+                                  style={{ fontSize: '1rem', padding: '8px 12px' }}
+                                />
+                                <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '3px', display: 'block' }}>
+                                  Permite dividir la cuenta e identificar qué consumió cada pareja o persona de la mesa.
+                                </span>
+                              </>
+                            );
+                          }
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {subGroupSelectMode === 'select' ? (
+                                <select
+                                  className="form-control"
+                                  value={subGroupName}
+                                  onChange={(e) => {
+                                    if (e.target.value === '__new__') {
+                                      setSubGroupSelectMode('new');
+                                      setSubGroupName('');
+                                    } else {
+                                      setSubGroupName(e.target.value);
+                                    }
+                                  }}
+                                  style={{ fontSize: '1rem', padding: '8px 12px', height: 'auto', WebkitAppearance: 'menulist' }}
+                                >
+                                  <option value="">-- Consumo General / Cuenta Consolidada --</option>
+                                  {activeGroups.map(g => (
+                                    <option key={g} value={g}>Unirse a la cuenta de: {g.toUpperCase()}</option>
+                                  ))}
+                                  <option value="__new__" style={{ fontWeight: 'bold', color: 'var(--primary-red)' }}>+ Crear nueva cuenta / pareja...</option>
+                                </select>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input 
+                                      type="text" 
+                                      className="form-control" 
+                                      placeholder="Ej: Pareja 2, Luis..."
+                                      value={subGroupName}
+                                      onChange={(e) => setSubGroupName(e.target.value)}
+                                      style={{ fontSize: '1rem', padding: '8px 12px', flex: 1 }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSubGroupSelectMode('select');
+                                        setSubGroupName('');
+                                      }}
+                                      style={{
+                                        padding: '8px 12px',
+                                        background: '#f1f5f9',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                      }}
+                                    >
+                                      Volver
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              <span style={{ fontSize: '0.75rem', color: '#666', display: 'block' }}>
+                                Selecciona una cuenta existente o crea una nueva para que no se mezclen los consumos de la mesa.
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   ) : (
