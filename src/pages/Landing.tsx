@@ -45,6 +45,10 @@ export const Landing: React.FC = () => {
     setProducts(getProducts());
     setIsEditMode(getEditMode());
     
+    // Resolve sub-group parameter if present in query string
+    const subGroup = searchParams.get('subGroup') || '';
+    setSubGroupName(subGroup);
+
     const resolveMozoSession = () => {
       const mozosList = getMozos();
       if (mozoIdParam) {
@@ -82,7 +86,7 @@ export const Landing: React.FC = () => {
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [mozoIdParam]);
+  }, [mozoIdParam, searchParams]);
 
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);

@@ -696,6 +696,27 @@ export const MozoPortal: React.FC = () => {
                         <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
                           <button
                             type="button"
+                            onClick={() => navigate(`/?mozoId=${activeMozo.id}&mesa=${encodeURIComponent(selectedTable)}&subGroup=${encodeURIComponent(groupName)}`)}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              background: '#e8f5e9',
+                              color: '#2e7d32',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <PlusCircle size={14} /> Pedir para {groupName}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handlePrintTableAccount(`${selectedTable} - ${groupName}`, activeMozo.name, groupOrders)}
                             style={{
                               flex: 1,

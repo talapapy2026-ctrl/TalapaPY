@@ -17,7 +17,7 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle } from 'lucide-react';
 
 export const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -1575,6 +1575,27 @@ export const Admin: React.FC = () => {
 
                                             {/* Group Actions */}
                                             <div style={{ display: 'flex', gap: '6px', marginTop: '8px', borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
+                                              <button
+                                                type="button"
+                                                onClick={() => navigate(`/?mozoId=${selectedMonitoredMozo.id}&mesa=${encodeURIComponent(selectedMonitoredTable)}&subGroup=${encodeURIComponent(groupName)}`)}
+                                                style={{
+                                                  flex: 1,
+                                                  padding: '5px',
+                                                  background: '#e8f5e9',
+                                                  color: '#2e7d32',
+                                                  border: 'none',
+                                                  borderRadius: '4px',
+                                                  fontWeight: 'bold',
+                                                  cursor: 'pointer',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  gap: '3px',
+                                                  fontSize: '0.7rem'
+                                                }}
+                                              >
+                                                <PlusCircle size={10} /> Pedir para {groupName}
+                                              </button>
                                               <button
                                                 type="button"
                                                 onClick={() => handlePrintTableAccount(`${selectedMonitoredTable} - ${groupName}`, selectedMonitoredMozo.name, groupOrders)}
