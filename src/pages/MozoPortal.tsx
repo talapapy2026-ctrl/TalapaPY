@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getMozos, getQROrders, updateQROrderStatus } from '../store';
 import type { Mozo, QRWaitOrder } from '../types';
-import { Clock, Check, LogOut, RefreshCw, ChefHat, LayoutGrid, PlusCircle, ArrowLeft, Printer } from 'lucide-react';
+import { Clock, Check, LogOut, RefreshCw, ChefHat, LayoutGrid, PlusCircle, ArrowLeft, Printer, Bluetooth } from 'lucide-react';
+import { 
+  connectBluetoothPrinter, 
+  disconnectBluetoothPrinter, 
+  getConnectedPrinterName, 
+  printBluetoothTableAccount 
+} from '../utils/bluetoothPrinter';
 
 export const MozoPortal: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +20,33 @@ export const MozoPortal: React.FC = () => {
   
   // Selected table in the grid
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+
+  // Bluetooth printer state
+  const [connectedPrinter, setConnectedPrinter] = useState<string | null>(getConnectedPrinterName());
+
+  useEffect(() => {
+    const handlePrinterChange = () => {
+      setConnectedPrinter(getConnectedPrinterName());
+    };
+    window.addEventListener('bluetooth_printer_changed', handlePrinterChange);
+    return () => {
+      window.removeEventListener('bluetooth_printer_changed', handlePrinterChange);
+    };
+  }, []);
+
+  const handleTogglePrinter = async () => {
+    if (connectedPrinter) {
+      disconnectBluetoothPrinter();
+      alert("Impresora desconectada.");
+    } else {
+      try {
+        const name = await connectBluetoothPrinter();
+        alert(`Conectado exitosamente a: ${name}`);
+      } catch (err: any) {
+        alert(`Error al conectar: ${err.message || err}`);
+      }
+    }
+  };
 
   // Stopwatch ticking state
   const [tick, setTick] = useState(0);
@@ -122,6 +155,27 @@ export const MozoPortal: React.FC = () => {
 
     const grandTotal = tableActiveOrders.reduce((sum, o) => sum + o.total, 0);
 
+    // Try printing via Bluetooth first if connected
+    if (connectedPrinter) {
+      printBluetoothTableAccount(table, mozoName, Object.values(consolidatedItems))
+        .then(success => {
+          if (!success) {
+            alert("Error al imprimir por Bluetooth, usando el diálogo del navegador.");
+            triggerIframePrint(table, mozoName, consolidatedItems, grandTotal);
+          }
+        });
+      return;
+    }
+
+    triggerIframePrint(table, mozoName, consolidatedItems, grandTotal);
+  };
+
+  const triggerIframePrint = (
+    table: string, 
+    mozoName: string, 
+    consolidatedItems: Record<string, { title: string; quantity: number; price: number }>, 
+    grandTotal: number
+  ) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0px';
@@ -345,11 +399,36 @@ export const MozoPortal: React.FC = () => {
         alignItems: 'center',
         boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
       }}>
-        <div>
-          <span style={{ fontSize: '0.75rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '1px' }}>Portal de Servicio</span>
-          <h1 style={{ fontFamily: 'Oswald', fontSize: '1.5rem', margin: 0, color: 'var(--secondary-yellow)' }}>
-            {activeMozo.name.toUpperCase()}
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '1px' }}>Portal de Servicio</span>
+            <h1 style={{ fontFamily: 'Oswald', fontSize: '1.5rem', margin: 0, color: 'var(--secondary-yellow)' }}>
+              {activeMozo.name.toUpperCase()}
+            </h1>
+          </div>
+          
+          <button
+            onClick={handleTogglePrinter}
+            style={{
+              background: connectedPrinter ? '#2e7d32' : 'rgba(255,255,255,0.15)',
+              border: connectedPrinter ? '1px solid #4caf50' : '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+              transition: 'all 0.3s ease',
+              boxShadow: connectedPrinter ? '0 0 10px rgba(76, 175, 80, 0.5)' : 'none'
+            }}
+            title={connectedPrinter ? `Conectado a ${connectedPrinter}` : "Conectar Impresora Termica Bluetooth"}
+          >
+            <Bluetooth size={14} className={connectedPrinter ? "" : "animate-pulse"} />
+            {connectedPrinter ? `Termica: ${connectedPrinter.slice(0, 10)}...` : 'Conectar Termica'}
+          </button>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <Link

@@ -17,10 +17,45 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle, Bluetooth } from 'lucide-react';
+import { 
+  connectBluetoothPrinter, 
+  disconnectBluetoothPrinter, 
+  getConnectedPrinterName, 
+  printBluetoothTableAccount, 
+  printBluetoothOrder 
+} from '../utils/bluetoothPrinter';
 
 export const Admin: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Bluetooth printer state
+  const [connectedPrinter, setConnectedPrinter] = useState<string | null>(getConnectedPrinterName());
+
+  useEffect(() => {
+    const handlePrinterChange = () => {
+      setConnectedPrinter(getConnectedPrinterName());
+    };
+    window.addEventListener('bluetooth_printer_changed', handlePrinterChange);
+    return () => {
+      window.removeEventListener('bluetooth_printer_changed', handlePrinterChange);
+    };
+  }, []);
+
+  const handleTogglePrinter = async () => {
+    if (connectedPrinter) {
+      disconnectBluetoothPrinter();
+      alert("Impresora desconectada.");
+    } else {
+      try {
+        const name = await connectBluetoothPrinter();
+        alert(`Conectado exitosamente a: ${name}`);
+      } catch (err: any) {
+        alert(`Error al conectar: ${err.message || err}`);
+      }
+    }
+  };
+
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [mozos, setMozos] = useState<Mozo[]>([]);
@@ -30,8 +65,15 @@ export const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sales' | 'qr_orders' | 'mozos'>('sales');
 
   // Date Filters
-  const [startDate, setStartDate] = useState(format(new Date(new Date().setMonth(new Date().getMonth() - 1)), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [hasManuallyFiltered, setHasManuallyFiltered] = useState(false);
+  
+  // Waiter History Modal state
+  const [selectedHistoryMozo, setSelectedHistoryMozo] = useState<Mozo | null>(null);
+  const [mozoHistoryStartDate, setMozoHistoryStartDate] = useState('');
+  const [mozoHistoryEndDate, setMozoHistoryEndDate] = useState('');
+  const [showMozoHistoryModal, setShowMozoHistoryModal] = useState(false);
   
   // Edit mode badge indicator
   const [editModeActive, setEditModeActive] = useState(false);
@@ -174,6 +216,18 @@ export const Admin: React.FC = () => {
       clearInterval(interval);
     };
   }, []);
+
+  // Automatic day-rollover check (resets to today's date if day changes and user hasn't manually filtered)
+  useEffect(() => {
+    const checkDateInterval = setInterval(() => {
+      if (!hasManuallyFiltered) {
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        setStartDate(prev => prev !== todayStr ? todayStr : prev);
+        setEndDate(prev => prev !== todayStr ? todayStr : prev);
+      }
+    }, 3000);
+    return () => clearInterval(checkDateInterval);
+  }, [hasManuallyFiltered]);
 
   // Web Audio API beep sound generator
   const playAlertSound = () => {
@@ -393,6 +447,27 @@ export const Admin: React.FC = () => {
 
     const grandTotal = tableActiveOrders.reduce((sum, o) => sum + o.total, 0);
 
+    // Try printing via Bluetooth first if connected
+    if (connectedPrinter) {
+      printBluetoothTableAccount(table, mozoName, Object.values(consolidatedItems))
+        .then(success => {
+          if (!success) {
+            alert("Error al imprimir por Bluetooth, usando el diálogo del navegador.");
+            triggerIframePrint(table, mozoName, consolidatedItems, grandTotal);
+          }
+        });
+      return;
+    }
+
+    triggerIframePrint(table, mozoName, consolidatedItems, grandTotal);
+  };
+
+  const triggerIframePrint = (
+    table: string, 
+    mozoName: string, 
+    consolidatedItems: Record<string, { title: string; quantity: number; price: number }>, 
+    grandTotal: number
+  ) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0px';
@@ -478,10 +553,27 @@ export const Admin: React.FC = () => {
   };
 
   // Print comanda logic
+  // Print comanda logic
   const handlePrintOrder = (order: QRWaitOrder) => {
     markOrderAsPrinted(order.id);
     setQrOrders(getQROrders());
 
+    // Try printing via Bluetooth first if connected
+    if (connectedPrinter) {
+      printBluetoothOrder(order)
+        .then(success => {
+          if (!success) {
+            alert("Error al imprimir por Bluetooth, usando el diálogo del navegador.");
+            triggerIframePrintOrder(order);
+          }
+        });
+      return;
+    }
+
+    triggerIframePrintOrder(order);
+  };
+
+  const triggerIframePrintOrder = (order: QRWaitOrder) => {
     // Create a hidden iframe for print
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
@@ -614,6 +706,28 @@ export const Admin: React.FC = () => {
   const mostSoldProduct = products.find(p => p.id === mostSoldId);
   const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0);
 
+  // Waiter history calculations
+  const mozoFilteredOrders = selectedHistoryMozo
+    ? qrOrders.filter(order => {
+        if (order.mozoId !== selectedHistoryMozo.id) return false;
+        if (!mozoHistoryStartDate || !mozoHistoryEndDate) return true;
+        try {
+          const orderDate = parseISO(order.date);
+          const start = new Date(mozoHistoryStartDate);
+          const end = new Date(mozoHistoryEndDate);
+          end.setHours(23, 59, 59, 999);
+          return isWithinInterval(orderDate, { start, end });
+        } catch (e) {
+          return true;
+        }
+      })
+    : [];
+
+  const mozoTotalOrdersCount = mozoFilteredOrders.length;
+  const mozoTotalBilledAmount = mozoFilteredOrders.reduce((sum, o) => {
+    return o.status !== 'cancelled' ? sum + o.total : sum;
+  }, 0);
+
   // Separate QR Orders
   const pendingQROrders = qrOrders.filter(o => o.status === 'pending');
   const kitchenCookingOrders = qrOrders.filter(o => o.status === 'accepted');
@@ -645,6 +759,35 @@ export const Admin: React.FC = () => {
           }}>
             {getFirebaseUrl() ? '🟢 B.D. EN LA NUBE (FIREBASE)' : '🔌 B.D. LOCAL (OFFLINE)'}
           </div>
+
+          {/* Bluetooth Printer Button */}
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={handleTogglePrinter}
+              style={{
+                width: '100%',
+                background: connectedPrinter ? '#2e7d32' : 'rgba(255,255,255,0.1)',
+                border: connectedPrinter ? '1px solid #4caf50' : '1px solid rgba(255,255,255,0.2)',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 'bold',
+                transition: 'all 0.3s ease',
+                boxShadow: connectedPrinter ? '0 0 10px rgba(76, 175, 80, 0.4)' : 'none'
+              }}
+              title={connectedPrinter ? `Conectado a ${connectedPrinter}` : "Conectar Impresora Termica Bluetooth"}
+            >
+              <Bluetooth size={16} className={connectedPrinter ? "" : "animate-pulse"} />
+              {connectedPrinter ? `Termica: ${connectedPrinter.slice(0, 12)}...` : 'Conectar Termica'}
+            </button>
+          </div>
+
           
           <Link to="/" className="sidebar-link">← Volver al Sitio</Link>
           <div style={{ margin: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}></div>
@@ -779,11 +922,11 @@ export const Admin: React.FC = () => {
             <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '25px', display: 'flex', gap: '20px', alignItems: 'flex-end', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
               <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
                 <label style={{ fontSize: '0.85rem', color: '#666' }}>Fecha de Inicio (Calendario 1)</label>
-                <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                <input type="date" className="form-control" value={startDate} onChange={e => { setStartDate(e.target.value); setHasManuallyFiltered(true); }} />
               </div>
               <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
                 <label style={{ fontSize: '0.85rem', color: '#666' }}>Fecha de Fin (Calendario 2)</label>
-                <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                <input type="date" className="form-control" value={endDate} onChange={e => { setEndDate(e.target.value); setHasManuallyFiltered(true); }} />
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn btn-secondary" style={{ whiteSpace: 'nowrap' }} onClick={handleAddTestSale}>
@@ -982,10 +1125,88 @@ export const Admin: React.FC = () => {
                               Mozo: <strong>{order.mozoName}</strong>
                             </div>
                           )}
-                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px' }}>
-                            {order.items.length} productos • Gs. {order.total.toLocaleString()}
+                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px', fontWeight: 'bold' }}>
+                            Total: Gs. {order.total.toLocaleString()}
+                          </div>
+                          
+                          {/* Detalles completos de productos */}
+                          <div style={{
+                            marginTop: '8px',
+                            background: '#ffffff',
+                            border: '1px solid #ffe082',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '0.85rem',
+                            color: '#333',
+                            minWidth: '220px',
+                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
+                          }}>
+                            {order.subGroup && (
+                              <div style={{ marginBottom: '5px', color: '#b57a00', fontWeight: 'bold', fontSize: '0.75rem', borderBottom: '1px solid #fff8e1', paddingBottom: '2px' }}>
+                                👤 GRUPO: {order.subGroup.toUpperCase()}
+                              </div>
+                            )}
+                            {order.items.map((it, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: i < order.items.length - 1 ? '1px dashed #f0f0f0' : 'none', padding: '3px 0' }}>
+                                <span style={{ fontWeight: 'bold', color: '#111' }}>{it.quantity}x {it.title}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
+                        
+                        {/* Dynamic Kitchen Timer */}
+                        {(() => {
+                          const diffMs = Date.now() - new Date(order.date).getTime();
+                          const diffSecs = Math.max(0, Math.floor(diffMs / 1000));
+                          const minutes = Math.floor(diffSecs / 60);
+                          const seconds = diffSecs % 60;
+                          const totalMinutes = diffSecs / 60;
+
+                          const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                          let timerStyle: React.CSSProperties = {
+                            fontFamily: 'monospace',
+                            fontSize: '1.8rem',
+                            fontWeight: 'bold',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            minWidth: '100px',
+                            margin: '0 15px',
+                            transition: 'all 0.3s ease'
+                          };
+
+                          if (totalMinutes >= 30) {
+                            timerStyle = {
+                              ...timerStyle,
+                              color: '#ffffff',
+                              backgroundColor: '#d50000',
+                              boxShadow: '0 0 15px rgba(213, 0, 0, 0.6)',
+                              opacity: tick % 2 === 0 ? 1 : 0.2
+                            };
+                          } else if (totalMinutes >= 10) {
+                            timerStyle = {
+                              ...timerStyle,
+                              color: '#ffffff',
+                              backgroundColor: '#e65100', // Strong orange
+                              boxShadow: '0 0 10px rgba(230, 81, 0, 0.5)'
+                            };
+                          } else {
+                            timerStyle = {
+                              ...timerStyle,
+                              color: '#e65100',
+                              backgroundColor: '#fff3e0',
+                              border: '2px solid #ffe0b2'
+                            };
+                          }
+
+                          return (
+                            <div style={timerStyle} title="Tiempo transcurrido desde la creación del pedido">
+                              {timeStr}
+                            </div>
+                          );
+                        })()}
+
                         <button
                           onClick={() => {
                             updateQROrderStatus(order.id, 'ready');
@@ -1045,8 +1266,32 @@ export const Admin: React.FC = () => {
                               🚨 Retira: {order.mozoName.toUpperCase()}
                             </div>
                           )}
-                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px' }}>
-                            {order.items.length} productos • Gs. {order.total.toLocaleString()}
+                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '3px', fontWeight: 'bold' }}>
+                            Total: Gs. {order.total.toLocaleString()}
+                          </div>
+                          
+                          {/* Detalles completos de productos */}
+                          <div style={{
+                            marginTop: '8px',
+                            background: '#ffffff',
+                            border: '1px solid #a5d6a7',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '0.85rem',
+                            color: '#333',
+                            minWidth: '220px',
+                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
+                          }}>
+                            {order.subGroup && (
+                              <div style={{ marginBottom: '5px', color: '#2e7d32', fontWeight: 'bold', fontSize: '0.75rem', borderBottom: '1px solid #e8f5e9', paddingBottom: '2px' }}>
+                                👤 GRUPO: {order.subGroup.toUpperCase()}
+                              </div>
+                            )}
+                            {order.items.map((it, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: i < order.items.length - 1 ? '1px dashed #f0f0f0' : 'none', padding: '3px 0' }}>
+                                <span style={{ fontWeight: 'bold', color: '#111' }}>{it.quantity}x {it.title}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                         <button
@@ -1214,6 +1459,19 @@ export const Admin: React.FC = () => {
                             </div>
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => {
+                                setSelectedHistoryMozo(mozo);
+                                const todayStr = format(new Date(), 'yyyy-MM-dd');
+                                setMozoHistoryStartDate(format(new Date(new Date().setMonth(new Date().getMonth() - 1)), 'yyyy-MM-dd'));
+                                setMozoHistoryEndDate(todayStr);
+                                setShowMozoHistoryModal(true);
+                              }}
+                              className="btn"
+                              style={{ padding: '5px 10px', fontSize: '0.75rem', marginRight: '8px', background: '#e8f5e9', color: '#1b5e20', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            >
+                              <Calendar size={12} /> Historial
+                            </button>
                             <button
                               onClick={() => {
                                 setQrMozoId(mozo.id);
@@ -1857,12 +2115,267 @@ export const Admin: React.FC = () => {
         )}
 
       </div>
+
+      {/* Waiter History Modal */}
+      {showMozoHistoryModal && selectedHistoryMozo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden',
+            border: '1px solid rgba(0, 0, 0, 0.05)',
+            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #da251d 0%, #b81b14 100%)',
+              color: 'white'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Oswald', fontSize: '1.4rem', letterSpacing: '0.5px' }}>
+                Historial de Pedidos: {selectedHistoryMozo.name.toUpperCase()}
+              </h2>
+              <button
+                onClick={() => setShowMozoHistoryModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content container */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#f8fafc' }}>
+              
+              {/* Calendars / Date filter */}
+              <div style={{
+                background: 'white',
+                padding: '16px 20px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                gap: '20px',
+                alignItems: 'flex-end',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>Fecha de Inicio</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={mozoHistoryStartDate}
+                    onChange={e => setMozoHistoryStartDate(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>Fecha de Fin</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={mozoHistoryEndDate}
+                    onChange={e => setMozoHistoryEndDate(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              {/* KPIs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{
+                  background: 'white',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '5px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Pedidos Registrados</span>
+                  <span style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e293b', fontFamily: 'Oswald' }}>
+                    {mozoTotalOrdersCount}
+                  </span>
+                </div>
+                <div style={{
+                  background: 'white',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '5px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>Total Facturado</span>
+                  <span style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a', fontFamily: 'Oswald' }}>
+                    Gs. {mozoTotalBilledAmount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Orders table */}
+              <div style={{
+                background: 'white',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#475569', fontWeight: 'bold' }}>Fecha / Hora</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#475569', fontWeight: 'bold' }}>Mesa / Grupo</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#475569', fontWeight: 'bold' }}>Productos</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#475569', fontWeight: 'bold', textAlign: 'right' }}>Total</th>
+                      <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: '#475569', fontWeight: 'bold', textAlign: 'center' }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mozoFilteredOrders.map(order => (
+                      <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', color: '#334155' }}>
+                          {new Date(order.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b' }}>
+                          {order.tableNumber} {order.subGroup && <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'normal' }}>({order.subGroup})</span>}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', color: '#334155' }}>
+                          {order.items.map(it => `${it.quantity}x ${it.title}`).join(', ')}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 'bold', color: '#1e293b', textAlign: 'right' }}>
+                          Gs. {order.total.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            display: 'inline-block',
+                            backgroundColor: (() => {
+                              switch(order.status) {
+                                case 'pending': return '#fef3c7';
+                                case 'accepted': return '#dbeafe';
+                                case 'ready': return '#ffedd5';
+                                case 'completed': return '#dcfce7';
+                                case 'closed': return '#e2e8f0';
+                                case 'cancelled': return '#fee2e2';
+                                default: return '#f1f5f9';
+                              }
+                            })(),
+                            color: (() => {
+                              switch(order.status) {
+                                case 'pending': return '#d97706';
+                                case 'accepted': return '#2563eb';
+                                case 'ready': return '#ea580c';
+                                case 'completed': return '#16a34a';
+                                case 'closed': return '#475569';
+                                case 'cancelled': return '#dc2626';
+                                default: return '#475569';
+                              }
+                            })()
+                          }}>
+                            {(() => {
+                              switch(order.status) {
+                                case 'pending': return 'Pendiente';
+                                case 'accepted': return 'En Cocina';
+                                case 'ready': return 'Listo';
+                                case 'completed': return 'Entregado';
+                                case 'closed': return 'Cerrado';
+                                case 'cancelled': return 'Cancelado';
+                                default: return order.status;
+                              }
+                            })()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {mozoFilteredOrders.length === 0 && (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                          No hay pedidos registrados para este mozo en las fechas seleccionadas.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              background: '#f8fafc'
+            }}>
+              <button
+                onClick={() => setShowMozoHistoryModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '8px 20px', fontSize: '0.9rem' }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
       
       <style>{`
         @keyframes pulse {
           0% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.1); opacity: 0.8; }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
       `}</style>
     </div>
