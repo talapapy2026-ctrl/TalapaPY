@@ -1508,43 +1508,122 @@ export const Admin: React.FC = () => {
 
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                      {tableActiveOrders.map(order => (
-                                        <div key={order.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', fontSize: '0.85rem' }}>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                            <span style={{
-                                              fontSize: '0.7rem',
-                                              padding: '2px 6px',
-                                              borderRadius: '10px',
-                                              fontWeight: 'bold',
-                                              color: order.status === 'pending' ? '#856404' : '#fff',
-                                              backgroundColor: order.status === 'pending' 
-                                                ? '#fff3cd' 
-                                                : order.status === 'ready' 
-                                                  ? '#ff9800' 
-                                                  : '#2e7d32'
-                                            }}>
-                                              {order.status === 'pending' 
-                                                ? 'Pendiente' 
-                                                : order.status === 'ready' 
-                                                  ? 'Listo' 
-                                                  : 'En Cocina'}
-                                            </span>
-                                            <span style={{ color: '#888', fontSize: '0.75rem' }}>Ref: #{order.id.slice(-5)}</span>
-                                          </div>
-                                          {order.items.map((it, idx) => (
-                                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#555', padding: '2px 0' }}>
-                                              <span>{it.quantity}x {it.title}</span>
-                                              <span>Gs. {(it.price * it.quantity).toLocaleString()}</span>
+                                    {(() => {
+                                      const groups: Record<string, QRWaitOrder[]> = {};
+                                      tableActiveOrders.forEach(order => {
+                                        const groupKey = order.subGroup?.trim() || 'General';
+                                        if (!groups[groupKey]) {
+                                          groups[groupKey] = [];
+                                        }
+                                        groups[groupKey].push(order);
+                                      });
+
+                                      return Object.entries(groups).map(([groupName, groupOrders]) => {
+                                        const groupTotal = groupOrders.reduce((sum, o) => sum + o.total, 0);
+                                        return (
+                                          <div key={groupName} style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #cbd5e1', paddingBottom: '6px', marginBottom: '10px' }}>
+                                              <h5 style={{ fontFamily: 'Oswald', margin: 0, fontSize: '0.85rem', color: 'var(--primary-red)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                👤 GRUPO: {groupName.toUpperCase()}
+                                              </h5>
+                                              <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1e293b' }}>
+                                                Subtotal: Gs. {groupTotal.toLocaleString()}
+                                              </span>
                                             </div>
-                                          ))}
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #f1f5f9', paddingTop: '5px', marginTop: '5px' }}>
-                                            <span>Total Pedido:</span>
-                                            <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                              {groupOrders.map(order => (
+                                                <div key={order.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px', fontSize: '0.8rem' }}>
+                                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                    <span style={{
+                                                      fontSize: '0.65rem',
+                                                      padding: '2px 6px',
+                                                      borderRadius: '10px',
+                                                      fontWeight: 'bold',
+                                                      color: order.status === 'pending' ? '#856404' : '#fff',
+                                                      backgroundColor: order.status === 'pending' 
+                                                        ? '#fff3cd' 
+                                                        : order.status === 'ready' 
+                                                          ? '#ff9800' 
+                                                          : order.status === 'completed'
+                                                            ? '#334155'
+                                                            : '#2e7d32'
+                                                    }}>
+                                                      {order.status === 'pending' 
+                                                        ? 'Pendiente' 
+                                                        : order.status === 'ready' 
+                                                          ? 'Listo' 
+                                                          : order.status === 'completed'
+                                                            ? 'Servido'
+                                                            : 'En Cocina'}
+                                                    </span>
+                                                    <span style={{ color: '#888', fontSize: '0.7rem' }}>Ref: #{order.id.slice(-5)}</span>
+                                                  </div>
+                                                  {order.items.map((it, idx) => (
+                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', color: '#555', padding: '1px 0' }}>
+                                                      <span>{it.quantity}x {it.title}</span>
+                                                      <span>Gs. {(it.price * it.quantity).toLocaleString()}</span>
+                                                    </div>
+                                                  ))}
+                                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', borderTop: '1px solid #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
+                                                    <span>Total:</span>
+                                                    <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+
+                                            {/* Group Actions */}
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px', borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
+                                              <button
+                                                type="button"
+                                                onClick={() => handlePrintTableAccount(`${selectedMonitoredTable} - ${groupName}`, selectedMonitoredMozo.name, groupOrders)}
+                                                style={{
+                                                  flex: 1,
+                                                  padding: '5px',
+                                                  background: '#e0f2fe',
+                                                  color: '#0369a1',
+                                                  border: 'none',
+                                                  borderRadius: '4px',
+                                                  fontWeight: 'bold',
+                                                  cursor: 'pointer',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  gap: '3px',
+                                                  fontSize: '0.7rem'
+                                                }}
+                                              >
+                                                <Printer size={10} /> Imprimir {groupName}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  handleCloseTable(groupOrders);
+                                                }}
+                                                style={{
+                                                  flex: 1,
+                                                  padding: '5px',
+                                                  background: '#fee2e2',
+                                                  color: '#b91c1c',
+                                                  border: 'none',
+                                                  borderRadius: '4px',
+                                                  fontWeight: 'bold',
+                                                  cursor: 'pointer',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  gap: '3px',
+                                                  fontSize: '0.7rem'
+                                                }}
+                                              >
+                                                <Check size={10} /> Cerrar {groupName}
+                                              </button>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
-                                    </div>
+                                        );
+                                      });
+                                    })()}
 
                                     {/* Grand Total and Actions */}
                                     <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '10px', marginTop: '5px' }}>

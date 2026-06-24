@@ -566,107 +566,181 @@ export const MozoPortal: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {selectedTableOrders.map(order => (
-                  <div 
-                    key={order.id}
-                    style={{
-                      background: '#f8fafc',
-                      borderRadius: '8px',
-                      padding: '15px',
-                      border: '1px solid #e2e8f0',
-                      borderLeft: `5px solid ${
-                        order.status === 'pending' 
-                          ? '#ffc107' 
-                          : order.status === 'ready' 
-                            ? '#4caf50' 
-                            : '#da251d'
-                      }`
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <div>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          padding: '3px 8px',
-                          borderRadius: '20px',
-                          fontWeight: 'bold',
-                          color: order.status === 'pending' ? '#856404' : '#fff',
-                          backgroundColor: order.status === 'pending' 
-                            ? '#fff3cd' 
-                            : order.status === 'ready' 
-                              ? '#4caf50' 
-                              : order.status === 'completed'
-                                ? '#334155'
-                                : '#da251d',
-                          marginRight: '10px',
-                          animation: order.status === 'ready' ? 'pulse 1.5s infinite' : 'none'
-                        }}>
-                          {order.status === 'pending' 
-                            ? 'Pendiente en Admin' 
-                            : order.status === 'ready' 
-                              ? '🚨 ¡LISTO PARA RETIRAR!' 
-                              : order.status === 'completed'
-                                ? '✓ Servido / Entregado'
-                                : 'En Cocina / Preparación'}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                          Ref: #{order.id.slice(-5)}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                        {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
+                {(() => {
+                  const groups: Record<string, QRWaitOrder[]> = {};
+                  selectedTableOrders.forEach(order => {
+                    const groupKey = order.subGroup?.trim() || 'General';
+                    if (!groups[groupKey]) {
+                      groups[groupKey] = [];
+                    }
+                    groups[groupKey].push(order);
+                  });
 
-                    <div style={{ marginBottom: '12px' }}>
-                      {order.items.map((item, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: '0.9rem', borderBottom: '1px dashed #e2e8f0' }}>
-                          <span><strong>{item.quantity}x</strong> {item.title}</span>
-                          <span style={{ color: '#555' }}>Gs. {(item.price * item.quantity).toLocaleString()}</span>
+                  return Object.entries(groups).map(([groupName, groupOrders]) => {
+                    const groupTotal = groupOrders.reduce((sum, o) => sum + o.total, 0);
+                    return (
+                      <div key={groupName} style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '15px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #cbd5e1', paddingBottom: '8px', marginBottom: '12px' }}>
+                          <h4 style={{ fontFamily: 'Oswald', margin: 0, fontSize: '1rem', color: 'var(--primary-red)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            👤 GRUPO: {groupName.toUpperCase()}
+                          </h4>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b' }}>
+                            Subtotal: Gs. {groupTotal.toLocaleString()}
+                          </span>
                         </div>
-                      ))}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontWeight: 'bold' }}>
-                        <span>Total:</span>
-                        <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
-                      </div>
-                    </div>
 
-                    <div>
-                      {order.status === 'pending' ? (
-                        <div style={{ fontSize: '0.8rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '5px', background: '#fffbeb', padding: '8px', borderRadius: '4px' }}>
-                          <Clock size={14} /> Esperando aprobación y comandado de la caja administradora...
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {groupOrders.map(order => (
+                            <div 
+                              key={order.id}
+                              style={{
+                                background: 'white',
+                                borderRadius: '8px',
+                                padding: '12px',
+                                border: '1px solid #e2e8f0',
+                                borderLeft: `5px solid ${
+                                  order.status === 'pending' 
+                                    ? '#ffc107' 
+                                    : order.status === 'ready' 
+                                      ? '#4caf50' 
+                                      : '#da251d'
+                                }`
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <div>
+                                  <span style={{
+                                    fontSize: '0.7rem',
+                                    padding: '2px 6px',
+                                    borderRadius: '20px',
+                                    fontWeight: 'bold',
+                                    color: order.status === 'pending' ? '#856404' : '#fff',
+                                    backgroundColor: order.status === 'pending' 
+                                      ? '#fff3cd' 
+                                      : order.status === 'ready' 
+                                        ? '#4caf50' 
+                                        : order.status === 'completed'
+                                          ? '#334155'
+                                          : '#da251d',
+                                    marginRight: '8px'
+                                  }}>
+                                    {order.status === 'pending' 
+                                      ? 'Pendiente' 
+                                      : order.status === 'ready' 
+                                        ? '🚨 ¡LISTO!' 
+                                        : order.status === 'completed'
+                                          ? '✓ Servido'
+                                          : 'En Cocina'}
+                                  </span>
+                                  <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                                    Ref: #{order.id.slice(-5)}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                                  {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+
+                              <div style={{ marginBottom: '10px' }}>
+                                {order.items.map((item, idx) => (
+                                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: '0.85rem', borderBottom: '1px dashed #e2e8f0' }}>
+                                    <span><strong>{item.quantity}x</strong> {item.title}</span>
+                                    <span style={{ color: '#555' }}>Gs. {(item.price * item.quantity).toLocaleString()}</span>
+                                  </div>
+                                ))}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                  <span>Total Pedido:</span>
+                                  <span style={{ color: 'var(--primary-red)' }}>Gs. {order.total.toLocaleString()}</span>
+                                </div>
+                              </div>
+
+                              <div>
+                                {order.status === 'pending' ? (
+                                  <div style={{ fontSize: '0.75rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '3px', background: '#fffbeb', padding: '6px', borderRadius: '4px' }}>
+                                    <Clock size={12} /> Esperando aprobación...
+                                  </div>
+                                ) : order.status === 'completed' ? (
+                                  <div style={{ fontSize: '0.75rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                                    ✓ Servido
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      handleUpdateStatus(order.id, 'completed');
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      padding: '6px',
+                                      background: '#2e7d32',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '5px',
+                                      fontSize: '0.8rem'
+                                    }}
+                                  >
+                                    <Check size={14} /> Marcar como Servido
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ) : order.status === 'completed' ? (
-                        <div style={{ fontSize: '0.8rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px', background: '#f1f5f9', padding: '8px', borderRadius: '4px', fontWeight: 'bold' }}>
-                          ✓ Pedido ya entregado y servido a la mesa.
+
+                        {/* Group Actions */}
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handlePrintTableAccount(`${selectedTable} - ${groupName}`, activeMozo.name, groupOrders)}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              background: '#e0f2fe',
+                              color: '#0369a1',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <Printer size={14} /> Imprimir {groupName}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCloseTable(groupOrders)}
+                            style={{
+                              flex: 1,
+                              padding: '8px',
+                              background: '#fee2e2',
+                              color: '#b91c1c',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <Check size={14} /> Cerrar {groupName}
+                          </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            handleUpdateStatus(order.id, 'completed');
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '10px',
-                            background: '#2e7d32',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            fontSize: '0.95rem'
-                          }}
-                        >
-                          <Check size={18} /> Marcar como Entregado / Servido
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      </div>
+                    );
+                  });
+                })()}
 
                 {/* Grand Total and Table Actions */}
                 {(() => {

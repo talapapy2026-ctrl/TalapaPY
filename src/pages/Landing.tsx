@@ -39,6 +39,7 @@ export const Landing: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [subGroupName, setSubGroupName] = useState('');
 
   useEffect(() => {
     setProducts(getProducts());
@@ -176,6 +177,7 @@ export const Landing: React.FC = () => {
       mozoId: orderMozoId,
       mozoName: orderMozoName,
       tableNumber: finalTableNumber,
+      subGroup: !deliveryMode && subGroupName.trim() ? subGroupName.trim() : undefined,
       items: orderItems,
       total: total,
       status: 'pending',
@@ -214,6 +216,7 @@ export const Landing: React.FC = () => {
     }
 
     setCart([]);
+    setSubGroupName('');
     setIsCartOpen(false);
     setOrderSentSuccess(true);
     setTimeout(() => {
@@ -658,6 +661,22 @@ export const Landing: React.FC = () => {
                           * La mesa se completó automáticamente a través del código QR.
                         </span>
                       )}
+                      
+                      {/* Sub-grupo / Identificación de cuenta opcional */}
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={{ fontSize: '0.9rem', color: '#333', fontWeight: 'bold' }}>¿Quién realiza el pedido? (Opcional)</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="Ej: Pareja 1, Juan, Grupo A..."
+                          value={subGroupName}
+                          onChange={(e) => setSubGroupName(e.target.value)}
+                          style={{ fontSize: '1rem', padding: '8px 12px' }}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '3px', display: 'block' }}>
+                          Permite dividir la cuenta e identificar qué consumió cada grupo/persona de la mesa.
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <>

@@ -45,6 +45,7 @@ export interface QRWaitOrder {
   mozoId: string;
   mozoName: string;
   tableNumber: string;
+  subGroup?: string;
   items: OrderItem[];
   total: number;
   status: 'pending' | 'accepted' | 'ready' | 'completed' | 'cancelled' | 'closed';
