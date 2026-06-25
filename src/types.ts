@@ -16,6 +16,10 @@ export interface Sale {
   date: string; // ISO string
   quantity: number;
   total: number;
+  mozoName?: string;
+  orderType?: 'delivery' | 'pickup' | 'table';
+  customerName?: string;
+  tableNumber?: string;
 }
 
 export interface HeroData {

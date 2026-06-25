@@ -68,12 +68,14 @@ export const Admin: React.FC = () => {
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [hasManuallyFiltered, setHasManuallyFiltered] = useState(false);
+  const [ignoreSalesDateFilter, setIgnoreSalesDateFilter] = useState(false);
   
   // Waiter History Modal state
   const [selectedHistoryMozo, setSelectedHistoryMozo] = useState<Mozo | null>(null);
   const [mozoHistoryStartDate, setMozoHistoryStartDate] = useState('');
   const [mozoHistoryEndDate, setMozoHistoryEndDate] = useState('');
   const [showMozoHistoryModal, setShowMozoHistoryModal] = useState(false);
+  const [ignoreMozoDateFilter, setIgnoreMozoDateFilter] = useState(false);
   
   // Edit mode badge indicator
   const [editModeActive, setEditModeActive] = useState(false);
@@ -264,7 +266,10 @@ export const Admin: React.FC = () => {
       productId: randomProduct.id,
       date: new Date().toISOString(),
       quantity: 1,
-      total: randomProduct.price
+      total: randomProduct.price,
+      orderType: 'table',
+      mozoName: 'Mozo Prueba',
+      tableNumber: 'Mesa Prueba'
     };
     addSale(newSale);
     setSales(getSales());
@@ -667,7 +672,11 @@ export const Admin: React.FC = () => {
         productId: item.productId,
         date: order.date,
         quantity: item.quantity,
-        total: item.price * item.quantity
+        total: item.price * item.quantity,
+        mozoName: order.mozoName,
+        orderType: order.deliveryDetails ? order.deliveryDetails.type : 'table',
+        customerName: order.deliveryDetails?.customerName || '',
+        tableNumber: order.tableNumber
       };
       addSale(sale);
     });
@@ -678,11 +687,45 @@ export const Admin: React.FC = () => {
     setSales(getSales());
   };
 
+  // Helper to parse "yyyy-MM-dd" date string as a local Date object
+  const parseLocalDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Helper to get source metadata (mozo / delivery / pickup) for a sale
+  const getSaleOrderInfo = (sale: Sale) => {
+    if (sale.orderType) {
+      return {
+        mozoName: sale.mozoName || '',
+        orderType: sale.orderType,
+        customerName: sale.customerName || '',
+        tableNumber: sale.tableNumber || ''
+      };
+    }
+    const matchingOrder = qrOrders.find(o => sale.id.startsWith(o.id));
+    if (matchingOrder) {
+      return {
+        mozoName: matchingOrder.mozoName || '',
+        orderType: matchingOrder.deliveryDetails ? matchingOrder.deliveryDetails.type : 'table',
+        customerName: matchingOrder.deliveryDetails?.customerName || '',
+        tableNumber: matchingOrder.tableNumber || ''
+      };
+    }
+    return {
+      mozoName: '',
+      orderType: 'table' as const,
+      customerName: '',
+      tableNumber: ''
+    };
+  };
+
   // Filter sales by selected dates
   const filteredSales = sales.filter(sale => {
+    if (ignoreSalesDateFilter) return true;
     const saleDate = parseISO(sale.date);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = parseLocalDate(startDate);
+    const end = parseLocalDate(endDate);
     end.setHours(23, 59, 59, 999);
     
     return isWithinInterval(saleDate, { start, end });
@@ -710,11 +753,12 @@ export const Admin: React.FC = () => {
   const mozoFilteredOrders = selectedHistoryMozo
     ? qrOrders.filter(order => {
         if (order.mozoId !== selectedHistoryMozo.id) return false;
+        if (ignoreMozoDateFilter) return true;
         if (!mozoHistoryStartDate || !mozoHistoryEndDate) return true;
         try {
           const orderDate = parseISO(order.date);
-          const start = new Date(mozoHistoryStartDate);
-          const end = new Date(mozoHistoryEndDate);
+          const start = parseLocalDate(mozoHistoryStartDate);
+          const end = parseLocalDate(mozoHistoryEndDate);
           end.setHours(23, 59, 59, 999);
           return isWithinInterval(orderDate, { start, end });
         } catch (e) {
@@ -919,16 +963,20 @@ export const Admin: React.FC = () => {
             <h1 style={{ color: 'var(--primary-red)', marginBottom: '20px', fontFamily: 'Oswald' }}>Historial de Ventas</h1>
             
             {/* Double Calendar Inputs */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '25px', display: 'flex', gap: '20px', alignItems: 'flex-end', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-              <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                <label style={{ fontSize: '0.85rem', color: '#666' }}>Fecha de Inicio (Calendario 1)</label>
-                <input type="date" className="form-control" value={startDate} onChange={e => { setStartDate(e.target.value); setHasManuallyFiltered(true); }} />
+            <div style={{ background: 'white', padding: '20px', borderRadius: '12px', marginBottom: '25px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+              <div className="form-group" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+                <label style={{ fontSize: '0.85rem', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Fecha de Inicio (Calendario 1)</label>
+                <input type="date" className="form-control" disabled={ignoreSalesDateFilter} value={startDate} onChange={e => { setStartDate(e.target.value); setHasManuallyFiltered(true); }} style={{ opacity: ignoreSalesDateFilter ? 0.5 : 1 }} />
               </div>
-              <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
-                <label style={{ fontSize: '0.85rem', color: '#666' }}>Fecha de Fin (Calendario 2)</label>
-                <input type="date" className="form-control" value={endDate} onChange={e => { setEndDate(e.target.value); setHasManuallyFiltered(true); }} />
+              <div className="form-group" style={{ marginBottom: 0, flex: '1 1 200px' }}>
+                <label style={{ fontSize: '0.85rem', color: '#666', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Fecha de Fin (Calendario 2)</label>
+                <input type="date" className="form-control" disabled={ignoreSalesDateFilter} value={endDate} onChange={e => { setEndDate(e.target.value); setHasManuallyFiltered(true); }} style={{ opacity: ignoreSalesDateFilter ? 0.5 : 1 }} />
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', marginTop: '22px' }} onClick={() => setIgnoreSalesDateFilter(!ignoreSalesDateFilter)}>
+                <input type="checkbox" checked={ignoreSalesDateFilter} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155', userSelect: 'none' }}>Ver todo el historial</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto', marginTop: '22px' }}>
                 <button className="btn btn-secondary" style={{ whiteSpace: 'nowrap' }} onClick={handleAddTestSale}>
                   + Venta Prueba
                 </button>
@@ -954,10 +1002,11 @@ export const Admin: React.FC = () => {
             {/* Sales Table */}
             <div style={{ background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
               <h2 style={{ marginBottom: '20px', fontFamily: 'Oswald', fontSize: '1.2rem' }}>Registro de Transacciones</h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f8f9fa', textAlign: 'left', borderBottom: '2px solid #eee' }}>
                     <th style={{ padding: '12px 15px', color: '#555' }}>Fecha/Hora</th>
+                    <th style={{ padding: '12px 15px', color: '#555' }}>Origen / Atendido</th>
                     <th style={{ padding: '12px 15px', color: '#555' }}>Producto</th>
                     <th style={{ padding: '12px 15px', color: '#555' }}>Cant.</th>
                     <th style={{ padding: '12px 15px', color: '#555', textAlign: 'right' }}>Total</th>
@@ -966,9 +1015,27 @@ export const Admin: React.FC = () => {
                 <tbody>
                   {filteredSales.map(sale => {
                     const product = products.find(p => p.id === sale.productId);
+                    const info = getSaleOrderInfo(sale);
                     return (
                       <tr key={sale.id} style={{ borderBottom: '1px solid #eee' }}>
                         <td style={{ padding: '12px 15px', fontSize: '0.9rem' }}>{format(parseISO(sale.date), 'dd/MM/yyyy HH:mm')}</td>
+                        <td style={{ padding: '12px 15px', fontSize: '0.85rem' }}>
+                          {info.orderType === 'delivery' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '4px', background: '#ffe3e3', color: 'var(--primary-red)', fontWeight: 'bold' }}>
+                              🛵 Delivery {info.customerName ? `— ${info.customerName}` : ''}
+                            </span>
+                          )}
+                          {info.orderType === 'pickup' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '4px', background: '#e3f2fd', color: '#0d47a1', fontWeight: 'bold' }}>
+                              🛍️ Retiro {info.customerName ? `— ${info.customerName}` : ''}
+                            </span>
+                          )}
+                          {info.orderType === 'table' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '4px', background: '#e8f5e9', color: '#1b5e20' }}>
+                              👤 {info.mozoName ? `Mozo: ${info.mozoName}` : 'Local'} {info.tableNumber ? `(${info.tableNumber})` : ''}
+                            </span>
+                          )}
+                        </td>
                         <td style={{ padding: '12px 15px', fontWeight: 600 }}>{product?.title || 'Desconocido'}</td>
                         <td style={{ padding: '12px 15px' }}>{sale.quantity}</td>
                         <td style={{ padding: '12px 15px', fontWeight: 'bold', textAlign: 'right' }}>Gs. {sale.total.toLocaleString()}</td>
@@ -977,7 +1044,7 @@ export const Admin: React.FC = () => {
                   })}
                   {filteredSales.length === 0 && (
                     <tr>
-                      <td colSpan={4} style={{ padding: '30px', textAlign: 'center', color: '#888' }}>
+                      <td colSpan={5} style={{ padding: '30px', textAlign: 'center', color: '#888' }}>
                         No hay ventas en las fechas seleccionadas.
                       </td>
                     </tr>
@@ -1463,8 +1530,9 @@ export const Admin: React.FC = () => {
                               onClick={() => {
                                 setSelectedHistoryMozo(mozo);
                                 const todayStr = format(new Date(), 'yyyy-MM-dd');
-                                setMozoHistoryStartDate(format(new Date(new Date().setMonth(new Date().getMonth() - 1)), 'yyyy-MM-dd'));
+                                setMozoHistoryStartDate(todayStr);
                                 setMozoHistoryEndDate(todayStr);
+                                setIgnoreMozoDateFilter(false);
                                 setShowMozoHistoryModal(true);
                               }}
                               className="btn"
@@ -2192,28 +2260,35 @@ export const Admin: React.FC = () => {
                 border: '1px solid #e2e8f0',
                 display: 'flex',
                 gap: '20px',
-                alignItems: 'flex-end',
+                alignItems: 'center',
+                flexWrap: 'wrap',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
               }}>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 180px' }}>
                   <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>Fecha de Inicio</label>
                   <input
                     type="date"
                     className="form-control"
+                    disabled={ignoreMozoDateFilter}
                     value={mozoHistoryStartDate}
                     onChange={e => setMozoHistoryStartDate(e.target.value)}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', opacity: ignoreMozoDateFilter ? 0.5 : 1 }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 180px' }}>
                   <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', marginBottom: '6px', display: 'block' }}>Fecha de Fin</label>
                   <input
                     type="date"
                     className="form-control"
+                    disabled={ignoreMozoDateFilter}
                     value={mozoHistoryEndDate}
                     onChange={e => setMozoHistoryEndDate(e.target.value)}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', opacity: ignoreMozoDateFilter ? 0.5 : 1 }}
                   />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', marginTop: '20px' }} onClick={() => setIgnoreMozoDateFilter(!ignoreMozoDateFilter)}>
+                  <input type="checkbox" checked={ignoreMozoDateFilter} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#334155', userSelect: 'none' }}>Ver todo el historial</span>
                 </div>
               </div>
 
@@ -2256,7 +2331,9 @@ export const Admin: React.FC = () => {
                 background: 'white',
                 borderRadius: '12px',
                 border: '1px solid #e2e8f0',
-                overflow: 'hidden',
+                overflowX: 'hidden',
+                overflowY: 'auto',
+                maxHeight: '350px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
               }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
