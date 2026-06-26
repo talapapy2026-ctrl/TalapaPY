@@ -1430,7 +1430,7 @@ export const Landing: React.FC = () => {
               {getRemovableIngredients(customizingProduct).length > 0 && (
                 <div style={{ marginBottom: '25px' }}>
                   <h4 style={{ fontSize: '1.05rem', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '12px', color: '#333', fontWeight: 'bold' }}>Quitar Ingredientes</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px' }}>
                     {getRemovableIngredients(customizingProduct).map(ing => {
                       const isRemoved = selectedRemovedIngredients.includes(ing);
                       return (
@@ -1474,7 +1474,7 @@ export const Landing: React.FC = () => {
               {/* Part 2: Agregados (Extras) */}
               <div>
                 <h4 style={{ fontSize: '1.05rem', borderBottom: '1px solid #eee', paddingBottom: '6px', marginBottom: '12px', color: '#333', fontWeight: 'bold' }}>Agregados (Opcional)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px' }}>
                   {[
                     { name: 'Huevo', price: 4000 },
                     { name: 'Bacon', price: 4000 },
@@ -1530,21 +1530,21 @@ export const Landing: React.FC = () => {
             </div>
 
             {/* Footer / Total and Submit */}
-            <div style={{ padding: '15px 20px', borderTop: '1px solid #eee', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
+            <div style={{ padding: '15px 20px', borderTop: '1px solid #eee', background: '#fafafa', display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ minWidth: '100px' }}>
                 <div style={{ fontSize: '0.75rem', color: '#666' }}>Subtotal</div>
-                <div className="text-red" style={{ fontSize: '1.4rem', fontWeight: 'bold', fontFamily: 'Oswald' }}>
+                <div className="text-red" style={{ fontSize: '1.4rem', fontWeight: 'bold', fontFamily: 'Oswald', lineHeight: '1.1' }}>
                   Gs. {(
                     customizingProduct.price + 
                     selectedExtras.reduce((sum, e) => sum + e.price, 0)
                   ).toLocaleString()}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flex: 1, justifyContent: 'flex-end', minWidth: '180px' }}>
                 <button 
                   type="button" 
                   className="btn btn-secondary" 
-                  style={{ padding: '8px 16px', fontSize: '0.9rem', borderRadius: '8px' }}
+                  style={{ padding: '10px 12px', fontSize: '0.85rem', borderRadius: '8px', flex: 1, textAlign: 'center' }}
                   onClick={() => setCustomizingProduct(null)}
                 >
                   Cancelar
@@ -1552,7 +1552,7 @@ export const Landing: React.FC = () => {
                 <button 
                   type="button" 
                   className="btn btn-primary" 
-                  style={{ padding: '8px 20px', fontSize: '0.9rem', borderRadius: '8px', fontWeight: 'bold' }}
+                  style={{ padding: '10px 12px', fontSize: '0.85rem', borderRadius: '8px', fontWeight: 'bold', flex: '1.5', textAlign: 'center' }}
                   onClick={() => addCustomizedToCart(customizingProduct, selectedRemovedIngredients, selectedExtras)}
                 >
                   Agregar al Pedido
