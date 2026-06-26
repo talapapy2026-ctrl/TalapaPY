@@ -17,7 +17,7 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle, Bluetooth } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle, Bluetooth, Edit } from 'lucide-react';
 import { 
   connectBluetoothPrinter, 
   disconnectBluetoothPrinter, 
@@ -62,7 +62,8 @@ export const Admin: React.FC = () => {
   const [qrOrders, setQrOrders] = useState<QRWaitOrder[]>([]);
   
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'sales' | 'qr_orders' | 'mozos'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'qr_orders' | 'mozos' | 'map'>('sales');
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
 
   // Date Filters
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -75,11 +76,26 @@ export const Admin: React.FC = () => {
   const [mozoHistoryStartDate, setMozoHistoryStartDate] = useState('');
   const [mozoHistoryEndDate, setMozoHistoryEndDate] = useState('');
   const [showMozoHistoryModal, setShowMozoHistoryModal] = useState(false);
+
+  // Toast Notification state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(prev => prev === message ? null : prev);
+    }, 3000);
+  };
+  useEffect(() => {
+    (window as any).showToast = showToast;
+  }, []);
   const [ignoreMozoDateFilter, setIgnoreMozoDateFilter] = useState(false);
   
   // Edit mode badge indicator
   const [editModeActive, setEditModeActive] = useState(false);
   const [isCocina, setIsCocina] = useState(false);
+
+  // Selected Order Detail Modal state
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<QRWaitOrder | null>(null);
 
   // Kitchen password configuration state
   const [cocinaPasswordSetting, setCocinaPasswordSetting] = useState(() => localStorage.getItem('talapa_cocina_password') || 'cocina');
@@ -218,6 +234,136 @@ export const Admin: React.FC = () => {
       clearInterval(interval);
     };
   }, []);
+
+  // Dynamic Leaflet Loader
+  useEffect(() => {
+    if (activeTab === 'map') {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+      if (!(window as any).L) {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.onload = () => setLeafletLoaded(true);
+        document.body.appendChild(script);
+      } else {
+        setLeafletLoaded(true);
+      }
+    }
+  }, [activeTab]);
+
+  const mapRef = useRef<any>(null);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number; name: string } | null>(null);
+
+  useEffect(() => {
+    if (activeTab === 'map' && leafletLoaded) {
+      const deliveryOrders = qrOrders.filter(o => 
+        o.deliveryDetails && 
+        o.deliveryDetails.type === 'delivery' && 
+        o.deliveryDetails.latitude && 
+        o.deliveryDetails.longitude
+      );
+
+      const timer = setTimeout(() => {
+        const L = (window as any).L;
+        if (!L) return;
+
+        if (!mapRef.current) {
+          const defaultCenter: [number, number] = deliveryOrders.length > 0
+            ? [deliveryOrders[0].deliveryDetails!.latitude!, deliveryOrders[0].deliveryDetails!.longitude!]
+            : [-25.2637, -57.5759];
+
+          const map = L.map('orders-map').setView(defaultCenter, 13);
+          mapRef.current = map;
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+          }).addTo(map);
+        } else {
+          const map = mapRef.current;
+          map.eachLayer((layer: any) => {
+            if (layer instanceof L.Marker) {
+              map.removeLayer(layer);
+            }
+          });
+        }
+
+        const map = mapRef.current;
+        deliveryOrders.forEach(order => {
+          const lat = order.deliveryDetails!.latitude!;
+          const lng = order.deliveryDetails!.longitude!;
+          const clientName = order.deliveryDetails!.customerName;
+          const phone = order.deliveryDetails!.phone;
+          const address = order.deliveryDetails!.address || 'Sin dirección';
+
+          const foodIcon = L.divIcon({
+            html: `<div style="font-size: 28px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🍔</div>`,
+            className: 'custom-food-marker',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+
+          const marker = L.marker([lat, lng], { icon: foodIcon }).addTo(map);
+
+          const itemsList = order.items.map(item => `<li>${item.quantity}x ${item.title}</li>`).join('');
+          const popupContent = `
+            <div style="font-family: Arial, sans-serif; min-width: 200px; font-size: 0.9rem; color: #333;">
+              <h4 style="margin: 0 0 5px 0; color: #da251d; font-family: Oswald; text-transform: uppercase;">
+                Pedido de: ${clientName}
+              </h4>
+              <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${phone}</p>
+              <p style="margin: 2px 0;"><strong>Dirección:</strong> ${address}</p>
+              <p onclick="navigator.clipboard.writeText('${lat}, ${lng}'); if (window.showToast) window.showToast('Coordenadas de ${clientName} copiadas!');" style="margin: 4px 0; font-family: monospace; color: #1e293b; background: #f1f5f9; padding: 6px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; text-align: center; font-weight: bold; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 4px;" title="Haz clic para copiar coordenadas">
+                📋 Copiar: ${lat.toFixed(6)}, ${lng.toFixed(6)}
+              </p>
+              <p style="margin: 5px 0 2px 0;"><strong>Detalle:</strong></p>
+              <ul style="margin: 0; padding-left: 15px; font-size: 0.85rem;">
+                ${itemsList}
+              </ul>
+              <p style="margin: 5px 0 0 0; font-weight: bold; color: #da251d;">Total: Gs. ${order.total.toLocaleString()}</p>
+            </div>
+          `;
+          marker.bindPopup(popupContent);
+          
+          marker.bindTooltip(`📍 ${clientName}`, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -10],
+            className: 'leaflet-tooltip-own',
+            interactive: true
+          });
+
+          // Click on tooltip itself will also copy coordinates!
+          marker.getTooltip().on('click', (e: any) => {
+            L.DomEvent.stopPropagation(e);
+            navigator.clipboard.writeText(`${lat}, ${lng}`);
+            showToast(`Coordenadas de ${clientName} copiadas!`);
+          });
+
+          marker.on('click', () => {
+            setSelectedCoords({ lat, lng, name: clientName });
+            navigator.clipboard.writeText(`${lat}, ${lng}`);
+            showToast(`Coordenadas de ${clientName} copiadas!`);
+          });
+        });
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, leafletLoaded, qrOrders]);
+
+  const flyToOrder = (lat: number, lng: number, name: string) => {
+    if (mapRef.current) {
+      mapRef.current.setView([lat, lng], 16);
+      setSelectedCoords({ lat, lng, name });
+    }
+  };
 
   // Automatic day-rollover check (resets to today's date if day changes and user hasn't manually filtered)
   useEffect(() => {
@@ -908,6 +1054,27 @@ export const Admin: React.FC = () => {
               }}
             >
               <Users size={18} /> Gestión de Mozos
+            </button>
+          )}
+
+
+
+          {!isCocina && (
+            <button 
+              onClick={() => setActiveTab('map')} 
+              className="sidebar-link" 
+              style={{ 
+                width: '100%', 
+                background: activeTab === 'map' ? 'rgba(255,255,255,0.15)' : 'none', 
+                border: 'none', 
+                textAlign: 'left', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>📍</span> Mapa de Pedidos
             </button>
           )}
         </div>
@@ -2182,6 +2349,261 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
+        {/* TAB 4: MAPS VIEW */}
+        {activeTab === 'map' && (
+          <div>
+            <h1 style={{ color: 'var(--primary-red)', marginBottom: '10px', fontFamily: 'Oswald' }}>
+              📍 Ubicación de Pedidos Delivery
+            </h1>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px' }}>
+              Monitorea en tiempo real las coordenadas GPS enviadas por tus clientes al pedir delivery desde sus hogares.
+            </p>
+
+            {/* Selected Coordinates Banner */}
+            <div style={{
+              background: selectedCoords ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' : '#f8fafc',
+              border: '1px solid #e2e8f0',
+              padding: '15px 20px',
+              borderRadius: '12px',
+              color: selectedCoords ? '#f8fafc' : '#475569',
+              marginBottom: '20px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>📍</span>
+                <div>
+                  {selectedCoords ? (
+                    <>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ubicación Seleccionada</div>
+                      <div 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${selectedCoords.lat}, ${selectedCoords.lng}`);
+                          showToast(`Coordenadas de ${selectedCoords.name} copiadas!`);
+                        }}
+                        style={{ fontSize: '1.1rem', fontFamily: 'monospace', cursor: 'copy' }}
+                        title="Haz clic para copiar coordenadas"
+                      >
+                        {selectedCoords.lat.toFixed(6)}, {selectedCoords.lng.toFixed(6)} <span style={{ color: 'var(--secondary-yellow)', fontSize: '0.95rem', marginLeft: '10px', fontFamily: 'sans-serif' }}>({selectedCoords.name})</span>
+                      </div>
+                    </>
+                  ) : (
+                    <span>Haz clic en un marcador de comida en el mapa o selecciona un pedido en la lista para ver las coordenadas.</span>
+                  )}
+                </div>
+              </div>
+              {selectedCoords && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedCoords.lat},${selectedCoords.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: 'var(--primary-red)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 'bold',
+                    transition: 'opacity 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                  onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                >
+                  Abrir en Google Maps
+                </a>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              {/* Left sidebar: Orders List */}
+              <div style={{
+                width: '320px',
+                background: 'white',
+                padding: '20px',
+                borderRadius: '12px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+                maxHeight: '600px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '15px'
+              }}>
+                <h2 style={{ fontFamily: 'Oswald', fontSize: '1.1rem', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', margin: 0, color: '#1e293b' }}>
+                  Lista de Deliveries
+                </h2>
+                
+                {(() => {
+                  const deliveryOrders = qrOrders.filter(o => 
+                    o.deliveryDetails && 
+                    o.deliveryDetails.type === 'delivery' && 
+                    o.deliveryDetails.latitude && 
+                    o.deliveryDetails.longitude
+                  );
+
+                  if (deliveryOrders.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#888', fontSize: '0.9rem' }}>
+                        No hay pedidos activos con ubicación GPS registrada.
+                      </div>
+                    );
+                  }
+
+                  return deliveryOrders.map(order => {
+                    const lat = order.deliveryDetails!.latitude!;
+                    const lng = order.deliveryDetails!.longitude!;
+                    const isSelected = selectedCoords && selectedCoords.lat === lat && selectedCoords.lng === lng;
+
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => flyToOrder(lat, lng, order.deliveryDetails!.customerName)}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: isSelected ? '2px solid var(--primary-red)' : '1px solid #e2e8f0',
+                          backgroundColor: isSelected ? '#fff0f0' : '#f8fafc',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? '0 4px 8px rgba(218, 37, 29, 0.1)' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.95rem' }}>
+                            {order.deliveryDetails!.customerName}
+                          </span>
+                          {(() => {
+                            let label = order.status as string;
+                            let bg = '#f1f5f9';
+                            let color = '#475569';
+                            switch(order.status) {
+                              case 'pending':
+                                label = 'Pendiente';
+                                bg = '#fef3c7';
+                                color = '#d97706';
+                                break;
+                              case 'accepted':
+                                label = 'En Cocina';
+                                bg = '#dbeafe';
+                                color = '#2563eb';
+                                break;
+                              case 'ready':
+                                label = 'Listo';
+                                bg = '#ffedd5';
+                                color = '#ea580c';
+                                break;
+                              case 'completed':
+                                label = 'Entregado';
+                                bg = '#dcfce7';
+                                color = '#16a34a';
+                                break;
+                              case 'closed':
+                                label = 'Cerrado';
+                                bg = '#e2e8f0';
+                                color = '#475569';
+                                break;
+                              case 'cancelled':
+                                label = 'Cancelado';
+                                bg = '#fee2e2';
+                                color = '#dc2626';
+                                break;
+                            }
+                            return (
+                              <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: bg,
+                                color: color
+                              }}>
+                                {label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>
+                          📞 <a 
+                            href={`https://wa.me/${(order.deliveryDetails!.phone || '').replace(/\D/g, '')}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ 
+                              color: '#16a34a', 
+                              textDecoration: 'underline', 
+                              fontWeight: 'bold',
+                              cursor: 'pointer' 
+                            }}
+                            title="Haz clic para chatear por WhatsApp"
+                          >
+                            {order.deliveryDetails!.phone || 'Sin teléfono'}
+                          </a>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          🏠 {order.deliveryDetails!.address || 'Sin dirección'}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(`${lat}, ${lng}`);
+                              showToast(`Coordenadas de ${order.deliveryDetails!.customerName} copiadas!`);
+                            }}
+                            style={{
+                              fontSize: '0.75rem',
+                              fontFamily: 'monospace',
+                              color: isSelected ? 'var(--primary-red)' : '#64748b',
+                              background: isSelected ? 'rgba(218, 37, 29, 0.05)' : '#e2e8f0',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              display: 'inline-block',
+                              fontWeight: 'bold',
+                              cursor: 'copy'
+                            }}
+                            title="Haz clic para copiar coordenadas"
+                          >
+                            📍 {lat.toFixed(6)}, {lng.toFixed(6)}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrderDetail(order);
+                            }}
+                            style={{
+                              background: 'var(--primary-red)',
+                              color: 'white',
+                              border: 'none',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontWeight: 'bold',
+                              fontSize: '0.75rem',
+                              transition: 'opacity 0.2s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                            onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                          >
+                            Detalle
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Right column: The Leaflet Map container */}
+              <div style={{ flex: 1, minWidth: '400px', background: 'white', padding: '10px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                <div id="orders-map" style={{ height: '580px', width: '100%', borderRadius: '8px', zIndex: 1 }}></div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Waiter History Modal */}
@@ -2454,7 +2876,273 @@ export const Admin: React.FC = () => {
           from { transform: translateY(20px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
+        .leaflet-tooltip-own {
+          background-color: #1e293b !important;
+          color: #f8fafc !important;
+          border: 1px solid #334155 !important;
+          border-radius: 6px !important;
+          padding: 4px 8px !important;
+          font-family: monospace !important;
+          font-size: 0.75rem !important;
+          font-weight: bold !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+        }
+        .leaflet-tooltip-own:before {
+          border-top-color: #1e293b !important;
+        }
       `}</style>
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          backgroundColor: '#1e293b',
+          color: '#f8fafc',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+          zIndex: 99999,
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'slideUp 0.2s ease-out',
+          border: '1px solid #334155'
+        }}>
+          <span>📋</span> {toastMessage}
+        </div>
+      )}
+
+      {selectedOrderDetail && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideUp 0.2s ease-out'
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'var(--primary-red)',
+              color: 'white',
+              padding: '16px 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontFamily: 'Oswald', fontSize: '1.2rem', textTransform: 'uppercase' }}>
+                Detalle del Pedido #{selectedOrderDetail.id}
+              </h3>
+              <button 
+                onClick={() => setSelectedOrderDetail(null)}
+                style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px', overflowY: 'auto', maxHeight: '450px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Cliente:</strong>
+                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b' }}>
+                  {selectedOrderDetail.deliveryDetails?.customerName}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '20px' }}>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Teléfono:</strong>
+                  <div>
+                    <a 
+                      href={`https://wa.me/${(selectedOrderDetail.deliveryDetails?.phone || '').replace(/\D/g, '')}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ 
+                        color: '#16a34a', 
+                        textDecoration: 'underline', 
+                        fontWeight: 'bold',
+                        cursor: 'pointer' 
+                      }}
+                      title="Haz clic para chatear por WhatsApp"
+                    >
+                      {selectedOrderDetail.deliveryDetails?.phone || 'Sin teléfono'}
+                    </a>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Estado:</strong>
+                  <div>
+                    {(() => {
+                      let label = selectedOrderDetail.status as string;
+                      let bg = '#f1f5f9';
+                      let color = '#475569';
+                      switch(selectedOrderDetail.status) {
+                        case 'pending': label = 'Pendiente'; bg = '#fef3c7'; color = '#d97706'; break;
+                        case 'accepted': label = 'En Cocina'; bg = '#dbeafe'; color = '#2563eb'; break;
+                        case 'ready': label = 'Listo'; bg = '#ffedd5'; color = '#ea580c'; break;
+                        case 'completed': label = 'Entregado'; bg = '#dcfce7'; color = '#16a34a'; break;
+                        case 'closed': label = 'Cerrado'; bg = '#e2e8f0'; color = '#475569'; break;
+                        case 'cancelled': label = 'Cancelado'; bg = '#fee2e2'; color = '#dc2626'; break;
+                      }
+                      return (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: bg,
+                          color: color
+                        }}>
+                          {label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Dirección de Entrega:</strong>
+                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '4px' }}>
+                  {selectedOrderDetail.deliveryDetails?.address || 'Sin dirección registrada'}
+                </div>
+              </div>
+
+              <div>
+                <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Ubicación GPS:</strong>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '4px', alignItems: 'center' }}>
+                  <div style={{
+                    fontFamily: 'monospace',
+                    background: '#f1f5f9',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.9rem',
+                    flex: 1
+                  }}>
+                    📍 {selectedOrderDetail.deliveryDetails?.latitude?.toFixed(6)}, {selectedOrderDetail.deliveryDetails?.longitude?.toFixed(6)}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (selectedOrderDetail.deliveryDetails?.latitude && selectedOrderDetail.deliveryDetails?.longitude) {
+                        navigator.clipboard.writeText(`${selectedOrderDetail.deliveryDetails.latitude}, ${selectedOrderDetail.deliveryDetails.longitude}`);
+                        showToast('Coordenadas copiadas al portapapeles!');
+                      }
+                    }}
+                    style={{
+                      background: '#1e293b',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <strong style={{ color: '#475569', fontSize: '0.85rem', textTransform: 'uppercase' }}>Productos del Pedido:</strong>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginTop: '6px' }}>
+                  {selectedOrderDetail.items.map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        padding: '10px 12px', 
+                        borderBottom: idx === selectedOrderDetail.items.length - 1 ? 'none' : '1px solid #f1f5f9',
+                        background: idx % 2 === 0 ? '#f8fafc' : 'white'
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontWeight: 'bold', marginRight: '6px' }}>{item.quantity}x</span>
+                        <span>{item.title}</span>
+                      </div>
+                      <span style={{ fontWeight: 'bold' }}>
+                        Gs. {(item.price * item.quantity).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginTop: '10px', 
+                background: '#fff0f0', 
+                padding: '12px 15px', 
+                borderRadius: '8px', 
+                border: '1px solid #fecaca' 
+              }}>
+                <span style={{ fontFamily: 'Oswald', fontSize: '1.1rem', color: 'var(--primary-red)', textTransform: 'uppercase' }}>Total a Pagar:</span>
+                <span style={{ fontFamily: 'Oswald', fontSize: '1.4rem', color: 'var(--primary-red)' }}>
+                  Gs. {selectedOrderDetail.total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              {selectedOrderDetail.deliveryDetails?.latitude && selectedOrderDetail.deliveryDetails?.longitude && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedOrderDetail.deliveryDetails.latitude},${selectedOrderDetail.deliveryDetails.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: 'var(--primary-red)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontSize: '0.9rem',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Ver en Google Maps
+                </a>
+              )}
+              <button
+                onClick={() => setSelectedOrderDetail(null)}
+                style={{
+                  background: '#64748b',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-export type Category = 'clasica' | 'simple' | 'extras' | 'salsas' | 'promos';
+export type Category = 'clasica' | 'simple' | 'extras' | 'salsas' | 'promos' | 'entradas' | 'burgers' | 'lomitos' | 'sandwiches';
 
 export interface Product {
   id: string;
@@ -8,6 +8,7 @@ export interface Product {
   category: Category;
   imageUrl: string;
   badge?: string;
+  imageZoom?: number; // Zoom scale factor (e.g. 1.0 to 3.0)
 }
 
 export interface Sale {
@@ -22,11 +23,18 @@ export interface Sale {
   tableNumber?: string;
 }
 
+export interface BannerItem {
+  url: string;
+  zoom?: number;
+  fitMode?: 'cover' | 'contain';
+}
+
 export interface HeroData {
   titleWhite: string;
   titleRed: string;
   subtitle: string;
   imageUrl: string;
+  banners?: (string | BannerItem)[];
 }
 
 export interface Mozo {
@@ -60,6 +68,8 @@ export interface QRWaitOrder {
     phone: string;
     type: 'delivery' | 'pickup';
     address?: string;
+    latitude?: number;
+    longitude?: number;
   };
 }
 

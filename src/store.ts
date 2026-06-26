@@ -3,36 +3,231 @@ import { FIREBASE_URL as CONFIG_FIREBASE_URL } from './config';
 
 const defaultProducts: Product[] = [
   {
-    id: '1',
-    title: 'Combo Cheeseburger',
-    description: 'Doble Carne, Cheddar, Cebollita, Ketchup & Mayonesa.',
-    price: 43000,
-    category: 'clasica',
-    imageUrl: 'cheeseburger.png'
+    id: 'e1',
+    title: 'Papas Fritas (Personal)',
+    description: 'Porción individual de papas fritas corte fino.',
+    price: 10000,
+    category: 'entradas',
+    imageUrl: 'Captura de pantalla 2026-06-25 141253.jpg'
   },
   {
-    id: '2',
-    title: 'Combo American',
-    description: 'Doble Carne, Cheddar, Tomate, Lechuga, Cebolla, Pepinillo & Salsa Mil Islas.',
+    id: 'e2',
+    title: 'Papas Fritas (Familiar)',
+    description: 'Porción familiar para compartir de papas fritas corte fino.',
+    price: 15000,
+    category: 'entradas',
+    imageUrl: 'Captura de pantalla 2026-06-25 141253.jpg'
+  },
+  {
+    id: 'e3',
+    title: 'Papas Fritas c/ Cheddar y Bacon',
+    description: 'Papas fritas con cheddar derretido y panceta crocante.',
+    price: 22000,
+    category: 'entradas',
+    imageUrl: 'Captura de pantalla 2026-06-25 141312.jpg'
+  },
+  {
+    id: 'e4',
+    title: 'Aros de Cebolla',
+    description: 'Aros de cebolla crujientes y dorados.',
+    price: 24000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e5',
+    title: 'Bastones de Mozzarella',
+    description: 'Bastones de queso mozzarella rebozados y fritos.',
+    price: 25000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e6',
+    title: 'Alitas de Pollo Frito',
+    description: 'Crujientes alitas de pollo frito de la casa.',
+    price: 40000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e7',
+    title: 'Croquetas de Carne',
+    description: 'Croquetas de carne sabrosas y crocantes.',
+    price: 24000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e8',
+    title: 'Picada Completa',
+    description: 'Mix de milanesitas de pollo y carne, bastones de mozzarella, papas fritas, aros de cebolla, croquetas.',
+    price: 70000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e9',
+    title: 'Picada p/ 2 Personas',
+    description: 'Milanesitas de pollo y carne acompañadas de papas fritas.',
     price: 45000,
-    category: 'clasica',
-    imageUrl: 'american_burger.png'
-  },
-  {
-    id: '3',
-    title: 'Papa Mediana',
-    description: 'Papas Fritas Corte Fino.',
-    price: 8000,
-    category: 'extras',
+    category: 'entradas',
     imageUrl: 'french_fries.png'
   },
   {
-    id: '4',
-    title: 'Salsa Cheddar',
-    description: 'Cheddar Derretido.',
-    price: 5000,
-    category: 'salsas',
+    id: 'e10',
+    title: 'Romanitas de Pollo',
+    description: 'Romanitas de pechuga de pollo crocantes.',
+    price: 40000,
+    category: 'entradas',
     imageUrl: 'french_fries.png'
+  },
+  {
+    id: 'e11',
+    title: 'Chicharrón',
+    description: 'Porción de chicharrón tradicional de la casa.',
+    price: 40000,
+    category: 'entradas',
+    imageUrl: 'french_fries.png'
+  },
+  // Burgers
+  {
+    id: 'b1',
+    title: 'Burger Kids',
+    description: 'Pan de papa, mayo casera, carne, queso cheddar.',
+    price: 15000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140807.jpg'
+  },
+  {
+    id: 'b2',
+    title: 'Burger Simple',
+    description: 'Pan de papa, mayo casera, carne, queso cheddar, lechuga, tomate, huevo.',
+    price: 22000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140829.jpg'
+  },
+  {
+    id: 'b3',
+    title: 'Burger Full Doble',
+    description: 'Pan brioche, mayo casera, doble carne, doble queso cheddar.',
+    price: 25000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140730.jpg'
+  },
+  {
+    id: 'b4',
+    title: 'Burger Fit',
+    description: 'Envuelto con lechuga repollada, carne, tomate, huevo.',
+    price: 25000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140938.jpg'
+  },
+  {
+    id: 'b5',
+    title: 'Burger Full Doble + Bacon',
+    description: 'Pan brioche, mayo casera, doble carne, doble queso cheddar, doble bacon.',
+    price: 28000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140750.jpg'
+  },
+  {
+    id: 'b6',
+    title: 'Burger Doble de la Casa',
+    description: 'Pan brioche, mayo casera, doble carne, doble queso cheddar, doble bacon, tomate, lechuga, huevo.',
+    price: 30000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140914.jpg'
+  },
+  {
+    id: 'b7',
+    title: 'Burger Full Doble de la Casa',
+    description: 'Pan brioche, mayo casera, doble carne, doble queso cheddar, doble bacon, tomate, lechuga, huevo, pepinillo, cebolla morada.',
+    price: 32000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140637.jpg'
+  },
+  {
+    id: 'b8',
+    title: 'Burger Full Triple + Bacon',
+    description: 'Pan brioche, mayo casera, triple carne, triple queso cheddar, triple bacon.',
+    price: 35000,
+    category: 'burgers',
+    imageUrl: 'Captura de pantalla 2026-06-25 140750.jpg'
+  },
+  // Lomitos
+  {
+    id: 'l1',
+    title: 'Lomito Árabe de Pollo/Carne/Mixto',
+    description: 'Pan árabe, mayo casera, pollo, carne o mixto, repollo, tomate, huevo.',
+    price: 26000,
+    category: 'lomitos',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 'l2',
+    title: 'Lomito Árabe Especial',
+    description: 'Pan árabe, mayo casera, carne, pollo o mixto, repollo, tomate, huevo, queso mozzarella, bacon.',
+    price: 29000,
+    category: 'lomitos',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 'l3',
+    title: 'Lomito Árabe de la Casa',
+    description: 'Pan árabe, mayo casera, carne, pollo o mixto, repollo, tomate, huevo, queso mozzarella, queso catupiry, choclo, bacon.',
+    price: 32000,
+    category: 'lomitos',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 'l4',
+    title: 'Lomito Árabe Vegetariano',
+    description: 'Pan árabe, mayo casera, repollo, lechuga repollada, tomate, huevo, queso mozzarella.',
+    price: 26000,
+    category: 'lomitos',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  // Sandwiches de Lomito
+  {
+    id: 's1',
+    title: 'Sándwich de Lomito de Pollo Mixteado',
+    description: 'Pan, pollo, bacon, queso.',
+    price: 25000,
+    category: 'sandwiches',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 's2',
+    title: 'Sándwich de Lomito Completo',
+    description: 'Pan, mayo casera, carne o pollo, tomate, lechuga, jamón, queso, huevo.',
+    price: 27000,
+    category: 'sandwiches',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 's3',
+    title: 'Sándwich de Lomito de la Casa',
+    description: 'Pan, mayo casera, carne o pollo, tomate, lechuga, jamón, queso, huevo, bacon, cebolla.',
+    price: 31000,
+    category: 'sandwiches',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 's4',
+    title: 'Sándwich de Lomito Doble',
+    description: 'Pan árabe, mayo casera, carne o pollo, repollo, lechuga repollada, tomate, huevo, queso mozzarella.',
+    price: 35000,
+    category: 'sandwiches',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
+  },
+  {
+    id: 's5',
+    title: 'Lomito al Plato',
+    description: 'Carne o pollo, jamón, queso, lechuga, tomate, huevo.',
+    price: 27000,
+    category: 'sandwiches',
+    imageUrl: 'Captura de pantalla 2026-06-25 143439.jpg'
   }
 ];
 
@@ -46,7 +241,16 @@ const defaultHero: HeroData = {
 // Getters and Setters
 export const getProducts = (): Product[] => {
   const stored = localStorage.getItem('talapa_products_v2');
-  return stored ? JSON.parse(stored) : defaultProducts;
+  if (stored) {
+    const parsed = JSON.parse(stored) as Product[];
+    if (parsed.length <= 4 || parsed.some(p => p.id === '1' || p.id === '2')) {
+      localStorage.setItem('talapa_products_v2', JSON.stringify(defaultProducts));
+      setTimeout(() => pushToServer(), 500);
+      return defaultProducts;
+    }
+    return parsed;
+  }
+  return defaultProducts;
 };
 
 export const getHeroData = (): HeroData => {
@@ -76,6 +280,7 @@ export const getQROrders = (): QRWaitOrder[] => {
 // Sync engine variables
 let isPushing = false;
 let pushPending = false;
+let lastWriteTime = 0;
 
 export const getFirebaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_FIREBASE_URL as string | undefined;
@@ -88,6 +293,7 @@ export const getFirebaseUrl = (): string => {
 };
 
 export const pushToServer = async () => {
+  lastWriteTime = Date.now();
   if (isPushing) {
     pushPending = true;
     return;
@@ -130,6 +336,10 @@ export const pushToServer = async () => {
 
 export const pullFromServer = async () => {
   if (isPushing || pushPending) return;
+  if (Date.now() - lastWriteTime < 10000) {
+    // Evitar sobreescribir con datos desactualizados del servidor justo después de escribir localmente
+    return;
+  }
   try {
     const firebaseUrl = getFirebaseUrl();
     let data: any = null;
