@@ -270,7 +270,7 @@ export const Landing: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const compressed = await compressImage(file, 800, 800, 0.7);
+        const compressed = await compressImage(file, 500, 500, 0.5);
         if (editingProduct) {
           setEditingProduct({ ...editingProduct, imageUrl: compressed, imageZoom: 1 });
         }
@@ -1832,7 +1832,7 @@ export const Landing: React.FC = () => {
                         const file = e.target.files?.[0];
                         if (file) {
                           try {
-                            const compressed = await compressImage(file, 1920, 1080, 0.7);
+                            const compressed = await compressImage(file, 1024, 768, 0.5);
                             const newBanners = [...(editingHero.banners || ['BANNER1.png', 'BANNER2.jpg', 'BANNER3.jpg']), { url: compressed, zoom: 1, fitMode: 'cover' as const }];
                             setEditingHero({ ...editingHero, banners: newBanners });
                           } catch (err) {
