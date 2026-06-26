@@ -17,7 +17,7 @@ import {
 } from '../store';
 import type { Sale, Product, Mozo, QRWaitOrder } from '../types';
 import { format, isWithinInterval, parseISO } from 'date-fns';
-import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle, Bluetooth, Edit } from 'lucide-react';
+import { Trash2, QrCode, Printer, Check, UserPlus, ShoppingCart, Users, Calendar, Sparkles, Clock, Lock, X, PlusCircle, Bluetooth } from 'lucide-react';
 import { 
   connectBluetoothPrinter, 
   disconnectBluetoothPrinter, 
